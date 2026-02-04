@@ -1,10 +1,10 @@
 import os
-import moneypatches  # noqa: F401 we just need to import it to apply the monkeypatch
-from dotenv import load_dotenv
+
 import niquests
 import tmdbsimple as tmdb
-# Now import tmdbsimple; it will use niquests internally
+from dotenv import load_dotenv
 
+import moneypatches  # noqa: F401 we just need to import it to apply the monkeypatch
 
 load_dotenv()
 
@@ -13,7 +13,6 @@ tmdb.API_KEY = os.getenv("TMDB_API_KEY")
 search = tmdb.Search()
 response = search.movie(query='The Matrix')
 print(response)
-
 
 
 def main():
