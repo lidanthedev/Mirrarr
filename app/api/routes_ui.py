@@ -1,11 +1,17 @@
 """UI routes returning HTML via Jinja2 templates."""
 
+from collections import defaultdict
 from pathlib import Path
 
 from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
 
-from app.services.tmdb import search_tmdb, MediaType
+from app.services.tmdb import (
+    search_tmdb,
+    MediaType,
+    get_series_details,
+    get_season_episodes,
+)
 from app.services.search import (
     get_provider_results_for_movie,
     get_provider_results_for_episode,
@@ -52,12 +58,7 @@ async def search(
     query: str = Form(...),
     media_type: str = Form("all"),
 ):
-    """Handle search form submission and return HTML partial.
-
-    This endpoint is called by HTMX and returns only the
-    search_results.html partial, not the full page.
-    """
-    # Convert string to MediaType enum
+    """Handle search form submission and return HTML partial."""
     if media_type == "movie":
         mt = MediaType.MOVIE
     elif media_type in ("tv", "series"):
@@ -73,6 +74,31 @@ async def search(
     )
 
 
+@router.get("/series/{tmdb_id}")
+async def series_modal(
+    request: Request,
+    tmdb_id: int,
+):
+    """Return the TV series modal with all seasons and episodes."""
+    series = get_series_details(tmdb_id)
+
+    # Fetch episodes for each season
+    seasons_with_episodes = []
+    for season in series.seasons:
+        episodes = get_season_episodes(tmdb_id, season.season_number)
+        season.episodes = episodes
+        seasons_with_episodes.append(season)
+
+    return templates.TemplateResponse(
+        "partials/series_modal.html",
+        {
+            "request": request,
+            "series": series,
+            "seasons": seasons_with_episodes,
+        },
+    )
+
+
 @router.get("/providers/{media_type}/{tmdb_id}")
 async def provider_modal(
     request: Request,
@@ -83,10 +109,9 @@ async def provider_modal(
     season: int = 1,
     episode: int = 1,
 ):
-    """Return the provider selection modal for a movie/series."""
+    """Return the provider selection modal for a movie/episode."""
     if media_type == "movie":
         media, results = await get_provider_results_for_movie(tmdb_id)
-        # Use fetched title/poster if not provided
         if not title:
             title = media.title
         if not poster_url and media.poster_url:
@@ -100,6 +125,11 @@ async def provider_modal(
         if not poster_url and media.poster_url:
             poster_url = media.poster_url
 
+    # Group results by provider
+    results_by_provider = defaultdict(list)
+    for result in results:
+        results_by_provider[result.source_site].append(result)
+
     best_result = select_best_result(results)
 
     return templates.TemplateResponse(
@@ -107,11 +137,41 @@ async def provider_modal(
         {
             "request": request,
             "results": results,
+            "results_by_provider": dict(results_by_provider),
             "best_result": best_result,
             "title": title,
             "poster_url": poster_url,
             "media_type": media_type,
             "tmdb_id": tmdb_id,
+            "season": season,
+            "episode": episode,
             "media": media,
         },
+    )
+
+
+@router.get("/episode/auto/{tmdb_id}/{season}/{episode}")
+async def episode_auto(
+    request: Request,
+    tmdb_id: int,
+    season: int,
+    episode: int,
+):
+    """Auto-download best quality for an episode.
+
+    Returns the download URL for redirect or HTMX handling.
+    """
+    _, results = await get_provider_results_for_episode(tmdb_id, season, episode)
+    best = select_best_result(results)
+
+    if best:
+        # Return a script to open download in new tab
+        return templates.TemplateResponse(
+            "partials/auto_download.html",
+            {"request": request, "download_url": best.download_url},
+        )
+
+    return templates.TemplateResponse(
+        "partials/toast.html",
+        {"request": request, "message": "No downloads available", "type": "error"},
     )

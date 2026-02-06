@@ -1,0 +1,105 @@
+<!-- TV Series Modal with Seasons -->
+<div id="series-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop - clicking closes modal -->
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onclick="document.getElementById('series-modal').remove()"></div>
+
+    <!-- Modal Content -->
+    <div
+        class="relative bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-slate-700">
+        <!-- Header -->
+        <div class="flex items-start gap-4 p-6 border-b border-slate-700">
+            {% if series.poster_url %}
+            <img src="{{ series.poster_url }}" alt="{{ series.title }}"
+                class="w-24 h-36 object-cover rounded-lg shadow-lg">
+            {% else %}
+            <div class="w-24 h-36 bg-slate-700 rounded-lg flex items-center justify-center">
+                <svg class="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                </svg>
+            </div>
+            {% endif %}
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl font-bold text-white">{{ series.title }}</h2>
+                <p class="text-slate-400 text-sm mt-1">
+                    {{ series.number_of_seasons }} Season(s) • {{ series.number_of_episodes }} Episode(s)
+                </p>
+                {% if series.status %}
+                <span class="inline-block mt-2 px-2 py-1 text-xs font-medium rounded bg-slate-700 text-slate-300">
+                    {{ series.status }}
+                </span>
+                {% endif %}
+            </div>
+            <!-- Close Button -->
+            <button onclick="document.getElementById('series-modal').remove()"
+                class="text-slate-400 hover:text-white transition-colors">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Seasons List -->
+        <div class="overflow-y-auto max-h-[65vh] p-4 space-y-3">
+            {% for season in seasons %}
+            <details class="group" {% if loop.first %}open{% endif %}>
+                <summary
+                    class="flex items-center justify-between p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg cursor-pointer transition-colors list-none">
+                    <div class="flex items-center gap-3">
+                        <svg class="h-5 w-5 text-slate-400 transition-transform group-open:rotate-90" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span class="font-medium text-white">Season {{ season.season_number }}</span>
+                        <span class="text-sm text-slate-400">{{ season.episode_count }} episodes</span>
+                    </div>
+                </summary>
+
+                <!-- Episodes Table -->
+                <div class="mt-2 ml-8 space-y-1">
+                    {% for episode in season.episodes %}
+                    <div
+                        class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <span class="text-sm font-medium text-slate-400 w-8">{{ episode.episode_number }}</span>
+                            <span class="text-white truncate">{{ episode.name }}</span>
+                            {% if episode.air_date %}
+                            <span class="text-xs text-slate-500 hidden sm:inline">{{ episode.air_date }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Episode Actions -->
+                        <div class="flex items-center gap-2">
+                            <!-- AUTO Button -->
+                            <button
+                                hx-get="/episode/auto/{{ series.id }}/{{ season.season_number }}/{{ episode.episode_number }}"
+                                hx-swap="none"
+                                class="p-2 bg-primary-600 hover:bg-primary-500 rounded-lg transition-colors group/btn"
+                                title="AUTO - Best Quality">
+                                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </button>
+
+                            <!-- Interactive Button -->
+                            <button
+                                hx-get="/providers/tv/{{ series.id }}?season={{ season.season_number }}&episode={{ episode.episode_number }}&title={{ series.title | urlencode }}&poster_url={{ series.poster_url | urlencode if series.poster_url else '' }}"
+                                hx-target="#modal-container" hx-swap="innerHTML"
+                                class="p-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors group/btn"
+                                title="Select Provider">
+                                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 6h16M4 12h16M4 18h7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -6,8 +6,9 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {% for result in results %}
         <div class="group relative bg-slate-800 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
-            hx-get="/providers/{{ result.media_type.value }}/{{ result.id }}?title={{ result.title | urlencode }}&poster_url={{ result.poster_url | urlencode if result.poster_url else '' }}"
-            hx-target="#modal-container" hx-swap="innerHTML">
+            {% if result.media_type.value=='movie' %}
+            hx-get="/providers/movie/{{ result.id }}?title={{ result.title | urlencode }}&poster_url={{ result.poster_url | urlencode if result.poster_url else '' }}"
+            {% else %} hx-get="/series/{{ result.id }}" {% endif %} hx-target="#modal-container" hx-swap="innerHTML">
             <!-- Poster Image -->
             <div class="aspect-[2/3] bg-slate-700">
                 {% if result.poster_url %}
