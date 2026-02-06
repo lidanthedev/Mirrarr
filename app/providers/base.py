@@ -1,0 +1,76 @@
+"""Provider base classes and interfaces."""
+
+from abc import ABC, abstractmethod
+from typing import List
+
+from pydantic import BaseModel
+
+from app.models.media import Movie, TVSeries
+
+
+class MovieResult(BaseModel):
+    """A movie download result from a provider."""
+
+    title: str
+    quality: str
+    size_mb: float
+    download_url: str
+    source_site: str
+
+
+class EpisodeResult(BaseModel):
+    """An episode download result from a provider."""
+
+    title: str
+    season: int
+    episode: int
+    quality: str
+    size_mb: float
+    download_url: str
+    source_site: str
+
+
+class ProviderInterface(ABC):
+    """Abstract base class for DDL providers.
+
+    All providers must implement this interface to be compatible
+    with the Mirrarr provider system. Providers receive pre-fetched
+    TMDB data via Movie/TVSeries objects - they do not query TMDB.
+    """
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return the unique name of this provider."""
+        pass
+
+    @abstractmethod
+    async def get_movie(self, movie: Movie) -> List[MovieResult]:
+        """Get download links for a movie.
+
+        Args:
+            movie: The Movie object with full TMDB data.
+
+        Returns:
+            A list of MovieResult objects with available downloads.
+        """
+        pass
+
+    @abstractmethod
+    async def get_series_episode(
+        self,
+        series: TVSeries,
+        season: int,
+        episode: int,
+    ) -> List[EpisodeResult]:
+        """Get download links for a TV episode.
+
+        Args:
+            series: The TVSeries object with full TMDB data.
+            season: The season number.
+            episode: The episode number.
+
+        Returns:
+            A list of EpisodeResult objects with available downloads.
+        """
+        pass
