@@ -49,9 +49,10 @@
         {% if best_result %}
         <div class="p-4 bg-slate-900/50 border-b border-slate-700">
             <button
-                hx-get="{% if media_type == 'movie' %}/movie/auto/{{ tmdb_id }}{% else %}/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}{% endif %}"
-                hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie'
-                %}onclick="document.getElementById('provider-modal').remove()" {% endif %}
+                hx-get="/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
+                hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
+                hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
+                hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
                 class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25">
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-white/20 rounded-lg">
@@ -100,10 +101,9 @@
                     {% for result in provider_results %}
                     <button
                         hx-get="/download/queue?url={{ result.download_url | urlencode }}&quality={{ result.quality | urlencode }}&source={{ result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
-                        hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie'
-                        %}onclick="document.getElementById('provider-modal').remove()" {% else
-                        %}hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif
-                        %}
+                        hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
+                        hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
+                        hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
                         class="flex items-center justify-between w-full p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors group/item text-left">
                         <div class="flex items-center gap-3">
                             <div class="p-2 bg-slate-600 rounded-lg group-hover/item:bg-primary-600 transition-colors">

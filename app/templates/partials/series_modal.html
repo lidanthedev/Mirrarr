@@ -74,7 +74,7 @@
                             <!-- AUTO Button -->
                             <button
                                 hx-get="/episode/auto/{{ series.id }}/{{ season.season_number }}/{{ episode.episode_number }}"
-                                hx-swap="none"
+                                hx-target="#toast-container" hx-swap="innerHTML"
                                 class="p-2 bg-primary-600 hover:bg-primary-500 rounded-lg transition-colors group/btn"
                                 title="AUTO - Best Quality">
                                 <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
