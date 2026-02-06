@@ -9,7 +9,6 @@ from app.services.tmdb import (
     search_tmdb,
     MediaType,
     get_series_details,
-    get_season_episodes,
 )
 from app.services.search import (
     get_provider_results_for_movie,
@@ -84,19 +83,12 @@ async def series_modal(
     """Return the TV series modal with all seasons and episodes."""
     series = get_series_details(tmdb_id)
 
-    # Fetch episodes for each season
-    seasons_with_episodes = []
-    for season in series.seasons:
-        episodes = get_season_episodes(tmdb_id, season.season_number)
-        season.episodes = episodes
-        seasons_with_episodes.append(season)
-
     return templates.TemplateResponse(
         "partials/series_modal.html",
         {
             "request": request,
             "series": series,
-            "seasons": seasons_with_episodes,
+            "seasons": series.seasons,
         },
     )
 

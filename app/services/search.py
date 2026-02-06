@@ -1,5 +1,6 @@
 """Search service for aggregating results from providers."""
 
+import asyncio
 from typing import List, Union
 
 from app.providers import ProviderRegistry
@@ -13,20 +14,28 @@ async def get_provider_results_for_movie(
 ) -> tuple[Movie, List[MovieResult]]:
     """Get download links from all providers for a movie.
 
-    First fetches the Movie from TMDB, then queries all providers.
+    First fetches the Movie from TMDB, then queries all providers concurrently.
 
     Returns:
         Tuple of (Movie, list of MovieResult)
     """
     movie = get_movie_details(tmdb_id)
-    results: List[MovieResult] = []
+    providers = ProviderRegistry.all()
 
-    for provider in ProviderRegistry.all():
+    async def fetch_from_provider(provider):
         try:
-            provider_results = await provider.get_movie(movie)
-            results.extend(provider_results)
+            return await provider.get_movie(movie)
         except Exception as e:
             print(f"Error fetching movie from {provider.name}: {e}")
+            return []
+
+    provider_results = await asyncio.gather(
+        *[fetch_from_provider(p) for p in providers]
+    )
+
+    results: List[MovieResult] = []
+    for result_list in provider_results:
+        results.extend(result_list)
 
     return movie, results
 
@@ -38,22 +47,28 @@ async def get_provider_results_for_episode(
 ) -> tuple[TVSeries, List[EpisodeResult]]:
     """Get download links from all providers for a TV episode.
 
-    First fetches the TVSeries from TMDB, then queries all providers.
+    First fetches the TVSeries from TMDB, then queries all providers concurrently.
 
     Returns:
         Tuple of (TVSeries, list of EpisodeResult)
     """
     series = get_series_details(tmdb_id)
-    results: List[EpisodeResult] = []
+    providers = ProviderRegistry.all()
 
-    for provider in ProviderRegistry.all():
+    async def fetch_from_provider(provider):
         try:
-            provider_results = await provider.get_series_episode(
-                series, season, episode
-            )
-            results.extend(provider_results)
+            return await provider.get_series_episode(series, season, episode)
         except Exception as e:
             print(f"Error fetching episode from {provider.name}: {e}")
+            return []
+
+    provider_results = await asyncio.gather(
+        *[fetch_from_provider(p) for p in providers]
+    )
+
+    results: List[EpisodeResult] = []
+    for result_list in provider_results:
+        results.extend(result_list)
 
     return series, results
 

@@ -19,7 +19,7 @@ class TestProvider(ProviderInterface):
 
     async def get_movie(self, movie: Movie) -> List[MovieResult]:
         """Return test movie download links."""
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
 
         return [
             MovieResult(
@@ -52,7 +52,7 @@ class TestProvider(ProviderInterface):
         episode: int,
     ) -> List[EpisodeResult]:
         """Return test episode download links."""
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
 
         return [
             EpisodeResult(

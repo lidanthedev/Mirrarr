@@ -1,5 +1,6 @@
 """TMDB service for searching and fetching movie/series details."""
 
+from functools import cache
 from typing import List, Optional
 from enum import Enum
 
@@ -122,6 +123,7 @@ def search_tmdb(
         return search_all(query)
 
 
+@cache
 def get_movie_details(tmdb_id: int) -> Movie:
     """Fetch full movie details from TMDB."""
     movie_api = tmdb.Movies(tmdb_id)
@@ -150,8 +152,9 @@ def get_movie_details(tmdb_id: int) -> Movie:
     )
 
 
+@cache
 def get_series_details(tmdb_id: int) -> TVSeries:
-    """Fetch full TV series details from TMDB including seasons."""
+    """Fetch full TV series details from TMDB including seasons and episodes."""
     tv_api = tmdb.TV(tmdb_id)
     info = tv_api.info()
 
@@ -159,10 +162,12 @@ def get_series_details(tmdb_id: int) -> TVSeries:
     backdrop_path = info.get("backdrop_path")
     first_air_date = info.get("first_air_date", "")
 
-    # Parse seasons (excluding specials - season 0)
+    # Parse seasons (excluding specials - season 0) and fetch episodes for each
     seasons = []
     for s in info.get("seasons", []):
         if s.get("season_number", 0) > 0:
+            # Fetch episodes for this season
+            episodes = get_season_episodes(tmdb_id, s["season_number"])
             seasons.append(
                 Season(
                     season_number=s["season_number"],
@@ -170,6 +175,7 @@ def get_series_details(tmdb_id: int) -> TVSeries:
                     episode_count=s.get("episode_count", 0),
                     air_date=s.get("air_date"),
                     overview=s.get("overview", ""),
+                    episodes=episodes,
                 )
             )
 
