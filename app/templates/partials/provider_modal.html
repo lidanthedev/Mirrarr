@@ -1,4 +1,4 @@
-<!-- Provider Selection Modal - Grouped by Provider -->
+<!-- Provider Selection Modal - Incremental Loading -->
 <div id="provider-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <!-- Backdrop - clicking closes modal -->
     <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -24,9 +24,6 @@
                 <p class="text-slate-400 text-sm mt-1">
                     {% if media_type == 'movie' %}Movie{% else %}TV Show - S{{ season }}E{{ episode }}{% endif %}
                 </p>
-                <p class="text-slate-400 text-sm mt-2">
-                    {{ results|length }} download option(s) available
-                </p>
             </div>
             <!-- Close/Back Button -->
             {% if media_type == 'tv' %}
@@ -45,87 +42,93 @@
             </button>
         </div>
 
-        <!-- AUTO Button -->
-        {% if best_result %}
+        <!-- AUTO Button - Loading State (will be replaced when all providers complete) -->
         <div class="p-4 bg-slate-900/50 border-b border-slate-700">
-            <button
-                hx-get="/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
-                hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
-                hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
-                hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
-                class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-white/20 rounded-lg">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-bold text-lg">AUTO - Best Quality</p>
-                        <p class="text-sm text-white/80">{{ best_result.quality }} •
-                            {% if best_result.size_mb >= 1024 %}
-                            {{ "%.1f"|format(best_result.size_mb / 1024) }} GB
-                            {% else %}
-                            {{ "%.0f"|format(best_result.size_mb) }} MB
-                            {% endif %}
-                            • {{ best_result.source_site }}</p>
-                    </div>
-                </div>
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-            </button>
-        </div>
-        {% endif %}
-
-        <!-- Provider Results Grouped by Provider -->
-        <div class="overflow-y-auto max-h-80 p-4 space-y-3">
-            {% if results_by_provider %}
-            {% for provider_name, provider_results in results_by_provider.items() %}
-            <details class="group" open>
-                <summary
-                    class="flex items-center justify-between p-3 bg-slate-700/50 hover:bg-slate-700 rounded-lg cursor-pointer transition-colors list-none">
+            <div id="auto-button-container"
+                hx-get="/auto-button/{{ media_type }}/{{ tmdb_id }}?season={{ season }}&episode={{ episode }}"
+                hx-trigger="load" hx-swap="innerHTML">
+                <!-- Loading state for AUTO button -->
+                <div
+                    class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-slate-600 to-slate-700 rounded-xl text-white cursor-not-allowed opacity-75">
                     <div class="flex items-center gap-3">
-                        <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span class="font-medium text-white">{{ provider_name }}</span>
-                        <span class="text-sm text-slate-400">{{ provider_results|length }} option(s)</span>
-                    </div>
-                </summary>
-
-                <div class="mt-2 ml-7 space-y-1">
-                    {% for result in provider_results %}
-                    <button
-                        hx-get="/download/queue?url={{ result.download_url | urlencode }}&quality={{ result.quality | urlencode }}&source={{ result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
-                        hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
-                        hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
-                        hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
-                        class="flex items-center justify-between w-full p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors group/item text-left">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-slate-600 rounded-lg group-hover/item:bg-primary-600 transition-colors">
-                                <svg class="h-4 w-4 text-slate-300 group-hover/item:text-white transition-colors"
-                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                            </div>
-                            <span class="font-medium text-white">{{ result.quality }}</span>
+                        <div class="p-2 bg-white/20 rounded-lg">
+                            <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
                         </div>
-                        <span class="text-sm font-medium text-slate-300">
-                            {% if result.size_mb >= 1024 %}
-                            {{ "%.1f"|format(result.size_mb / 1024) }} GB
-                            {% else %}
-                            {{ "%.0f"|format(result.size_mb) }} MB
-                            {% endif %}
-                        </span>
-                    </button>
-                    {% endfor %}
+                        <div>
+                            <p class="font-bold text-lg">AUTO - Best Quality</p>
+                            <p class="text-sm text-white/80">Waiting for all providers...</p>
+                        </div>
+                    </div>
+                    <svg class="h-6 w-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
                 </div>
-            </details>
+            </div>
+        </div>
+
+        <!-- Provider Results - Each loads independently -->
+        <div class="overflow-y-auto max-h-80 p-4 space-y-3">
+            {% if provider_names %}
+            {% for provider_name in provider_names %}
+            <!-- Provider loading container - will be replaced with actual results -->
+            <div id="provider-{{ provider_name | replace(' ', '-') }}"
+                hx-get="/provider-results/{{ media_type }}/{{ tmdb_id }}/{{ provider_name }}?season={{ season }}&episode={{ episode }}"
+                hx-trigger="load" hx-swap="outerHTML">
+                <!-- Loading skeleton -->
+                <details class="group" open>
+                    <summary
+                        class="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg cursor-pointer list-none">
+                        <div class="flex items-center gap-3">
+                            <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span class="font-medium text-white">{{ provider_name }}</span>
+                            <!-- Loading spinner -->
+                            <svg class="animate-spin h-4 w-4 text-primary-400" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                        </div>
+                    </summary>
+                    <div class="mt-2 ml-7 space-y-1">
+                        <!-- Skeleton placeholders -->
+                        <div
+                            class="flex items-center justify-between w-full p-3 bg-slate-800/50 rounded-lg animate-pulse">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-slate-600 rounded-lg">
+                                    <div class="h-4 w-4"></div>
+                                </div>
+                                <div class="h-4 w-20 bg-slate-600 rounded"></div>
+                            </div>
+                            <div class="h-4 w-16 bg-slate-600 rounded"></div>
+                        </div>
+                        <div
+                            class="flex items-center justify-between w-full p-3 bg-slate-800/50 rounded-lg animate-pulse">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-slate-600 rounded-lg">
+                                    <div class="h-4 w-4"></div>
+                                </div>
+                                <div class="h-4 w-24 bg-slate-600 rounded"></div>
+                            </div>
+                            <div class="h-4 w-12 bg-slate-600 rounded"></div>
+                        </div>
+                    </div>
+                </details>
+            </div>
             {% endfor %}
             {% else %}
             <div class="text-center py-8 text-slate-500">
@@ -133,7 +136,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
                 </svg>
-                <p>No providers found for this content</p>
+                <p>No providers configured</p>
             </div>
             {% endif %}
         </div>

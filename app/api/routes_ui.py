@@ -1,6 +1,5 @@
 """UI routes returning HTML via Jinja2 templates."""
 
-from collections import defaultdict
 from pathlib import Path
 
 from fastapi import APIRouter, Request, Form
@@ -15,8 +14,11 @@ from app.services.tmdb import (
 from app.services.search import (
     get_provider_results_for_movie,
     get_provider_results_for_episode,
+    get_single_provider_results_for_movie,
+    get_single_provider_results_for_episode,
     select_best_result,
 )
+from app.providers import ProviderRegistry
 
 router = APIRouter()
 
@@ -109,36 +111,35 @@ async def provider_modal(
     season: int = 1,
     episode: int = 1,
 ):
-    """Return the provider selection modal for a movie/episode."""
+    """Return the provider selection modal with loading skeletons.
+
+    Shows immediately with loading spinners for each provider,
+    which then fetch their results independently via HTMX.
+    """
+    from app.services.tmdb import get_movie_details, get_series_details
+
+    # Get media info for the header (fast TMDB lookup only)
     if media_type == "movie":
-        media, results = await get_provider_results_for_movie(tmdb_id)
+        media = get_movie_details(tmdb_id)
         if not title:
             title = media.title
         if not poster_url and media.poster_url:
             poster_url = media.poster_url
     else:
-        media, results = await get_provider_results_for_episode(
-            tmdb_id, season, episode
-        )
+        media = get_series_details(tmdb_id)
         if not title:
             title = media.title
         if not poster_url and media.poster_url:
             poster_url = media.poster_url
 
-    # Group results by provider
-    results_by_provider = defaultdict(list)
-    for result in results:
-        results_by_provider[result.source_site].append(result)
-
-    best_result = select_best_result(results)
+    # Get list of all registered providers for loading skeletons
+    provider_names = ProviderRegistry.names()
 
     return templates.TemplateResponse(
         "partials/provider_modal.html",
         {
             "request": request,
-            "results": results,
-            "results_by_provider": dict(results_by_provider),
-            "best_result": best_result,
+            "provider_names": provider_names,
             "title": title,
             "poster_url": poster_url,
             "media_type": media_type,
@@ -146,6 +147,72 @@ async def provider_modal(
             "season": season,
             "episode": episode,
             "media": media,
+        },
+    )
+
+
+@router.get("/provider-results/{media_type}/{tmdb_id}/{provider_name}")
+async def provider_result(
+    request: Request,
+    media_type: str,
+    tmdb_id: int,
+    provider_name: str,
+    season: int = 1,
+    episode: int = 1,
+):
+    """Fetch results from a single provider and return HTML partial.
+
+    Called by HTMX on page load for each provider to enable incremental loading.
+    """
+    if media_type == "movie":
+        _, results = await get_single_provider_results_for_movie(tmdb_id, provider_name)
+    else:
+        _, results = await get_single_provider_results_for_episode(
+            tmdb_id, season, episode, provider_name
+        )
+
+    return templates.TemplateResponse(
+        "partials/provider_result.html",
+        {
+            "request": request,
+            "provider_name": provider_name,
+            "provider_results": results,
+            "media_type": media_type,
+            "tmdb_id": tmdb_id,
+            "season": season,
+            "episode": episode,
+        },
+    )
+
+
+@router.get("/auto-button/{media_type}/{tmdb_id}")
+async def auto_button(
+    request: Request,
+    media_type: str,
+    tmdb_id: int,
+    season: int = 1,
+    episode: int = 1,
+):
+    """Return the AUTO button after all providers have loaded.
+
+    Waits for all providers to complete, then returns the best result button.
+    """
+    if media_type == "movie":
+        _, results = await get_provider_results_for_movie(tmdb_id)
+    else:
+        _, results = await get_provider_results_for_episode(tmdb_id, season, episode)
+
+    best_result = select_best_result(results)
+
+    return templates.TemplateResponse(
+        "partials/auto_button.html",
+        {
+            "request": request,
+            "best_result": best_result,
+            "media_type": media_type,
+            "tmdb_id": tmdb_id,
+            "season": season,
+            "episode": episode,
         },
     )
 

@@ -58,6 +58,56 @@ async def get_provider_results_for_episode(
     return series, results
 
 
+async def get_single_provider_results_for_movie(
+    tmdb_id: int,
+    provider_name: str,
+) -> tuple[Movie, List[MovieResult]]:
+    """Get download links from a single provider for a movie.
+
+    Returns:
+        Tuple of (Movie, list of MovieResult)
+    """
+    movie = get_movie_details(tmdb_id)
+    results: List[MovieResult] = []
+
+    provider = ProviderRegistry.get(provider_name)
+    if provider:
+        try:
+            provider_results = await provider.get_movie(movie)
+            results.extend(provider_results)
+        except Exception as e:
+            print(f"Error fetching movie from {provider.name}: {e}")
+
+    return movie, results
+
+
+async def get_single_provider_results_for_episode(
+    tmdb_id: int,
+    season: int,
+    episode: int,
+    provider_name: str,
+) -> tuple[TVSeries, List[EpisodeResult]]:
+    """Get download links from a single provider for a TV episode.
+
+    Returns:
+        Tuple of (TVSeries, list of EpisodeResult)
+    """
+    series = get_series_details(tmdb_id)
+    results: List[EpisodeResult] = []
+
+    provider = ProviderRegistry.get(provider_name)
+    if provider:
+        try:
+            provider_results = await provider.get_series_episode(
+                series, season, episode
+            )
+            results.extend(provider_results)
+        except Exception as e:
+            print(f"Error fetching episode from {provider.name}: {e}")
+
+    return series, results
+
+
 def select_best_result(
     results: List[Union[MovieResult, EpisodeResult]],
 ) -> Union[MovieResult, EpisodeResult, None]:
