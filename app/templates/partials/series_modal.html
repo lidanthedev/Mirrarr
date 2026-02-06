@@ -77,9 +77,17 @@
                                 hx-target="#toast-container" hx-swap="innerHTML"
                                 class="p-2 bg-primary-600 hover:bg-primary-500 rounded-lg transition-colors group/btn"
                                 title="AUTO - Best Quality">
-                                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <!-- Normal state icon -->
+                                <svg class="h-4 w-4 text-white htmx-hide-on-request" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <!-- Loading spinner (shown during request) -->
+                                <svg class="h-4 w-4 text-white animate-spin htmx-show-on-request" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" stroke-width="2" stroke-dasharray="31.4 31.4"
+                                        stroke-linecap="round" />
                                 </svg>
                             </button>
 

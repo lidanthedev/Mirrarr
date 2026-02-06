@@ -23,6 +23,24 @@ html {
     display: inline-flex;
 }
 
+.htmx-hide-on-request {
+    display: block !important;
+}
+
+/* Hide normal icons during HTMX request */
+.htmx-request .htmx-hide-on-request {
+    display: none !important;
+}
+
+/* Show loading spinners during HTMX request - hidden by default */
+.htmx-show-on-request {
+    display: none !important;
+}
+
+.htmx-request .htmx-show-on-request {
+    display: block !important;
+}
+
 /* Smooth transitions for HTMX swaps */
 .htmx-swapping {
     opacity: 0;

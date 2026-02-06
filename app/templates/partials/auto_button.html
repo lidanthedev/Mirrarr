@@ -1,4 +1,4 @@
-<!-- AUTO Button - Best Quality -->
+<!-- AUTO Button - Best Quality (also triggers toast) -->
 {% if best_result %}
 <button
     hx-get="/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
@@ -28,6 +28,20 @@
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
 </button>
+
+<!-- Also show toast immediately with the result -->
+<script>
+    // Show a toast notification about what was selected
+    var toastContainer = document.getElementById('toast-container');
+    if (toastContainer) {
+        var toast = document.createElement('div');
+        toast.className = 'p-4 bg-blue-600 rounded-lg shadow-lg text-white flex items-center gap-3';
+        toast.innerHTML = '<svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg><span>Selected: {{ best_result.quality }} from {{ best_result.source_site }}</span>';
+        toastContainer.innerHTML = '';
+        toastContainer.appendChild(toast);
+        setTimeout(function () { toast.remove(); }, 3000);
+    }
+</script>
 {% else %}
 <div class="flex items-center justify-center w-full p-4 bg-slate-700/50 rounded-xl text-slate-400">
     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
