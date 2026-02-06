@@ -159,19 +159,81 @@ async def episode_auto(
 ):
     """Auto-download best quality for an episode.
 
-    Returns the download URL for redirect or HTMX handling.
+    Shows a toast and logs the URL to console (simulated download).
     """
     _, results = await get_provider_results_for_episode(tmdb_id, season, episode)
     best = select_best_result(results)
 
     if best:
-        # Return a script to open download in new tab
         return templates.TemplateResponse(
             "partials/auto_download.html",
-            {"request": request, "download_url": best.download_url},
+            {
+                "request": request,
+                "download_url": best.download_url,
+                "quality": best.quality,
+                "source": best.source_site,
+            },
         )
 
     return templates.TemplateResponse(
         "partials/toast.html",
         {"request": request, "message": "No downloads available", "type": "error"},
+    )
+
+
+@router.get("/movie/auto/{tmdb_id}")
+async def movie_auto(
+    request: Request,
+    tmdb_id: int,
+):
+    """Auto-download best quality for a movie.
+
+    Shows a toast and logs the URL to console (simulated download).
+    """
+    _, results = await get_provider_results_for_movie(tmdb_id)
+    best = select_best_result(results)
+
+    if best:
+        return templates.TemplateResponse(
+            "partials/auto_download.html",
+            {
+                "request": request,
+                "download_url": best.download_url,
+                "quality": best.quality,
+                "source": best.source_site,
+            },
+        )
+
+    return templates.TemplateResponse(
+        "partials/toast.html",
+        {"request": request, "message": "No downloads available", "type": "error"},
+    )
+
+
+@router.get("/download/queue")
+async def download_queue(
+    request: Request,
+    url: str,
+    quality: str = "",
+    source: str = "",
+    media_type: str = "movie",
+    tmdb_id: int = 0,
+    season: int = 1,
+    episode: int = 1,
+):
+    """Queue a download - shows toast and logs URL to console.
+
+    This is a simulated download - in production this would actually queue the download.
+    """
+    # Log the download (this is where actual download logic would go)
+    print(f"[DOWNLOAD QUEUED] {quality} from {source}: {url}")
+
+    return templates.TemplateResponse(
+        "partials/auto_download.html",
+        {
+            "request": request,
+            "download_url": url,
+            "quality": quality,
+            "source": source,
+        },
     )
