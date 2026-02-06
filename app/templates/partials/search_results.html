@@ -8,7 +8,19 @@
         <div class="group relative bg-slate-800 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
             {% if result.media_type.value=='movie' %}
             hx-get="/providers/movie/{{ result.id }}?title={{ result.title | urlencode }}&poster_url={{ result.poster_url | urlencode if result.poster_url else '' }}"
-            {% else %} hx-get="/series/{{ result.id }}" {% endif %} hx-target="#modal-container" hx-swap="innerHTML">
+            {% else %} hx-get="/series/{{ result.id }}" {% endif %} hx-target="#modal-container" hx-swap="innerHTML"
+            hx-indicator="find .card-loading-spinner">
+            <!-- Card Loading Spinner -->
+            <div
+                class="card-loading-spinner htmx-indicator absolute inset-0 bg-slate-900/80 z-10 flex items-center justify-center">
+                <svg class="animate-spin h-10 w-10 text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+            </div>
             <!-- Poster Image -->
             <div class="aspect-[2/3] bg-slate-700">
                 {% if result.poster_url %}

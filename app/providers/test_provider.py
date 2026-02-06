@@ -1,5 +1,6 @@
 """Test provider for testing multiple provider display."""
 
+import asyncio
 from typing import List
 
 from app.providers.base import ProviderInterface, MovieResult, EpisodeResult
@@ -18,6 +19,8 @@ class TestProvider(ProviderInterface):
 
     async def get_movie(self, movie: Movie) -> List[MovieResult]:
         """Return test movie download links."""
+        await asyncio.sleep(1)
+
         return [
             MovieResult(
                 title=movie.title,
@@ -49,6 +52,8 @@ class TestProvider(ProviderInterface):
         episode: int,
     ) -> List[EpisodeResult]:
         """Return test episode download links."""
+        await asyncio.sleep(1)
+
         return [
             EpisodeResult(
                 title=f"{series.title} S{season:02d}E{episode:02d}",

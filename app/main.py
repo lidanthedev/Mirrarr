@@ -11,6 +11,7 @@ from app.api.routes_ui import router as ui_router
 from app.api.routes_api import router as api_router
 from app.providers import register_provider
 from app.providers.dummy_provider import DummyProvider
+from app.providers.test_provider import TestProvider
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 # Register providers
 register_provider(DummyProvider())
+register_provider(TestProvider())
 
 # Include routers
 app.include_router(ui_router)
