@@ -1,350 +1,71 @@
-"""Vadapav provider."""
+"""Vadapav provider for https://vadapav.mov/."""
 
-import logging
-import niquests
-import re
 from typing import List
-
-from app.providers.base import ProviderInterface, MovieResult, EpisodeResult
-from app.models.media import Movie, TVSeries
-from bs4 import BeautifulSoup
-from typing import NamedTuple
 from urllib.parse import urljoin
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from bs4 import BeautifulSoup
 
-BASE_URL = "https://vadapav.mov"
-ALLOWED_EXTENSIONS = video_extensions = (
-    # Common & Modern
-    "mp4",
-    "m4v",
-    "mkv",
-    "webm",
-    "mov",
-    "avi",
-    "wmv",
-    # High Definition / Transport Streams
-    "mts",
-    "m2ts",
-    "ts",
-    "avchd",
-    # Legacy / Mobile
-    "flv",
-    "vob",
-    "ogv",
-    "3gp",
-    "3g2",
-    "mjp",
-    "m1v",
-    "m2v",
-    # Professional / Flash / Other
-    "f4v",
-    "swf",
-    "asf",
-    "qt",
-)
+from app.providers.directory_list_provider import DirectoryListProvider, FileEntry
 
 
-# Typed Named Tuple for file entries
-class FileEntry(NamedTuple):
-    name: str
-    path: str
-    size: float
+class VadapavProvider(DirectoryListProvider):
+    """Vadapav provider for https://vadapav.mov/.
 
-
-async def get_directory_contents(target_url):
-    results = []
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    try:
-        response = await niquests.aget(target_url, headers=headers)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        file_entries = soup.find_all("li", class_="file-entry")
-
-        for entry in file_entries:
-            # 1. Get the Name and Link
-            link_tag = entry.find("a", class_="directory-entry")
-
-            if link_tag:
-                name = link_tag.get_text(strip=True)
-                path = urljoin(target_url, link_tag.get("href"))
-
-                # 2. Get the Size
-                # We find the div that contains the name,
-                # then look for the next div sibling which holds the size.
-                name_div = entry.find("div", class_="name-div")
-                size_div = name_div.find_next_sibling("div")
-
-                size = size_div.get_text(strip=True) if size_div else "-"
-                if size == "-":
-                    size = 0.0
-                else:
-                    size = float(size)
-
-                results.append(FileEntry(name=name, path=path, size=size))
-
-        return results
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return []
-
-
-class VadapavProvider(ProviderInterface):
-    """Vadapav provider."""
+    Uses list-based HTML format for directory listings.
+    """
 
     @property
     def name(self) -> str:
         return "VadapavProvider"
 
-    async def get_directory(self, directory: str) -> List[FileEntry]:
-        """Return directory contents."""
-        return await get_directory_contents(directory)
+    @property
+    def base_url(self) -> str:
+        return "https://vadapav.mov"
 
-    async def get_movie_entries(self) -> List[FileEntry]:
-        """Return list of movies."""
-        return await get_directory_contents(f"{BASE_URL}/movies")
+    @property
+    def movies_path(self) -> str:
+        return "/movies"
 
-    async def get_tv_entries(self) -> List[FileEntry]:
-        """Return list of TV series."""
-        return await get_directory_contents(f"{BASE_URL}/shows")
+    @property
+    def tv_path(self) -> str:
+        return "/shows"
 
-    async def get_movie_entries_by_name(self, name: str) -> List[FileEntry]:
-        """Return list of movie files by name.
+    async def _parse_directory_html(self, html: str, base_url: str) -> List[FileEntry]:
+        """Parse list-based HTML format.
 
-        Movies can be:
-        1. Directly in /movies as files (e.g., KPop.Demon.Hunters.2025.1080p.WEB.h264-EDITH.mkv)
-        2. Inside a folder (e.g., /movies/The Matrix (1999)/ containing .mkv/.mp4 files)
-        """
-        movie_entries = await self.get_movie_entries()
-        results = []
-        name_lower = name.lower()
-
-        for entry in movie_entries:
-            entry_name_lower = entry.name.lower()
-
-            # Check if it's a direct video file that matches the movie name
-            if entry.name.endswith(ALLOWED_EXTENSIONS):
-                # Check if movie name appears in the filename
-                if name_lower in entry_name_lower or self._normalize_name(
-                    name_lower
-                ) in self._normalize_name(entry_name_lower):
-                    results.append(entry)
-            else:
-                # It's a folder - check if folder name matches movie name
-                if name_lower in entry_name_lower or self._normalize_name(
-                    name_lower
-                ) in self._normalize_name(entry_name_lower):
-                    # Get files inside the folder
-                    folder_contents = await get_directory_contents(entry.path)
-                    for file_entry in folder_contents:
-                        if file_entry.name.endswith(ALLOWED_EXTENSIONS):
-                            results.append(file_entry)
-
-        return results
-
-    def _normalize_name(self, name: str) -> str:
-        """Normalize a name for fuzzy matching by removing special chars."""
-
-        # Remove year in parentheses, dots, dashes, underscores
-        name = re.sub(r"\(\d{4}\)", "", name)
-        name = re.sub(r"[.\-_]", " ", name)
-        name = re.sub(r"\s+", " ", name)
-        return name.strip().lower()
-
-    def get_quality_from_name(self, name: str) -> str:
-        """Return quality from name including resolution and type."""
-        name_lower = name.lower()
-
-        # Detect resolution
-        resolution = ""
-        if "2160p" in name_lower or "4k" in name_lower or "uhd" in name_lower:
-            resolution = "2160p"
-        elif "1080p" in name_lower:
-            resolution = "1080p"
-        elif "720p" in name_lower:
-            resolution = "720p"
-        elif "480p" in name_lower:
-            resolution = "480p"
-
-        # Detect quality type
-        quality_type = ""
-        if "remux" in name_lower:
-            quality_type = "REMUX"
-        elif "bluray" in name_lower or "blu-ray" in name_lower or "bdrip" in name_lower:
-            quality_type = "BluRay"
-        elif "web-dl" in name_lower or "webdl" in name_lower:
-            quality_type = "WEB-DL"
-        elif "webrip" in name_lower or "web-rip" in name_lower:
-            quality_type = "WEBRip"
-        elif "hdtv" in name_lower:
-            quality_type = "HDTV"
-        elif "dvdrip" in name_lower or "dvd" in name_lower:
-            quality_type = "DVDRip"
-        elif "cam" in name_lower or "hdcam" in name_lower:
-            quality_type = "CAM"
-        elif "web" in name_lower:
-            quality_type = "WEB"
-
-        # Combine resolution and type
-        if resolution and quality_type:
-            return f"{resolution} {quality_type}"
-        elif resolution:
-            return resolution
-        elif quality_type:
-            return quality_type
-        return "Unknown"
-
-    async def get_movie(self, movie: Movie) -> List[MovieResult]:
-        """Return movie download links."""
-        try:
-            movie_entries = await self.get_movie_entries_by_name(movie.title)
-            results = []
-            for movie_entry in movie_entries:
-                if movie_entry.name.endswith(ALLOWED_EXTENSIONS):
-                    logger.info(f"Movie entry: {movie_entry}")
-                    results.append(
-                        MovieResult(
-                            title=movie.title,
-                            quality=self.get_quality_from_name(movie_entry.name),
-                            size_mb=movie_entry.size / 1024 / 1024,
-                            download_url=movie_entry.path,
-                            source_site=self.name,
-                            filename=movie_entry.name,
-                        )
-                    )
-            return results
-        except Exception as e:
-            logger.warning(f"Error fetching movie from {self.name}", exc_info=e)
-            return []
-
-    async def get_series_entries_by_name(self, name: str) -> List[FileEntry]:
-        """Return list of series folder entries by name.
-
-        Series can be:
-        1. A folder like /shows/Breaking Bad/
-        2. Inside that folder, episodes directly or season folders
-        """
-        tv_entries = await self.get_tv_entries()
-        name_lower = name.lower()
-
-        for entry in tv_entries:
-            entry_name_lower = entry.name.lower()
-
-            # Check if folder name matches series name
-            if name_lower in entry_name_lower or self._normalize_name(
-                name_lower
-            ) in self._normalize_name(entry_name_lower):
-                return [entry]
-
-        return []
-
-    async def get_episode_files(
-        self,
-        series_path: str,
-        season: int,
-        episode: int,
-    ) -> List[FileEntry]:
-        """Find episode files for a specific season and episode.
-
-        Structure can be:
-        1. /shows/Series Name/Season X/ - episodes in season folder
-        2. /shows/Series Name/ - episodes directly in series folder
+        Format:
+        <li class="file-entry">
+            <div class="name-div">
+                <a class="directory-entry" href="/path">Name</a>
+            </div>
+            <div>Size</div>
+        </li>
         """
         results = []
-        folder_contents = await get_directory_contents(series_path)
+        soup = BeautifulSoup(html, "html.parser")
 
-        # Look for season folder first (e.g., "Season 1", "Season 01", "S01")
-        season_patterns = [
-            f"season {season}",
-            f"season {season:02d}",
-            f"s{season:02d}",
-            f"s{season}",
-        ]
+        file_entries = soup.find_all("li", class_="file-entry")
 
-        for entry in folder_contents:
-            entry_name_lower = entry.name.lower()
+        for entry in file_entries:
+            link_tag = entry.find("a", class_="directory-entry")
 
-            # Check if this is a season folder
-            for pattern in season_patterns:
-                if pattern in entry_name_lower:
-                    # Found season folder, get episodes from it
-                    season_contents = await get_directory_contents(entry.path)
-                    for ep_entry in season_contents:
-                        if self._matches_episode(ep_entry.name, season, episode):
-                            results.append(ep_entry)
-                    break
+            if link_tag:
+                name = link_tag.get_text(strip=True)
+                path = urljoin(base_url, link_tag.get("href"))
 
-            # Also check if episodes are directly in series folder
-            if entry.name.endswith((".mkv", ".mp4", ".avi")):
-                if self._matches_episode(entry.name, season, episode):
-                    results.append(entry)
+                # Get the size from the sibling div
+                name_div = entry.find("div", class_="name-div")
+                size_div = name_div.find_next_sibling("div") if name_div else None
+
+                size_text = size_div.get_text(strip=True) if size_div else "-"
+                if size_text == "-":
+                    size = 0.0
+                else:
+                    try:
+                        size = float(size_text)
+                    except ValueError:
+                        size = 0.0
+
+                results.append(FileEntry(name=name, path=path, size=size))
 
         return results
-
-    def _matches_episode(self, filename: str, season: int, episode: int) -> bool:
-        """Check if filename matches the season and episode number."""
-        filename_lower = filename.lower()
-
-        # Common patterns: S01E01, s01e01, 1x01, etc.
-        patterns = [
-            rf"s{season:02d}e{episode:02d}",
-            rf"s{season}e{episode}",
-            rf"{season}x{episode:02d}",
-            rf"{season}x{episode}",
-            rf"season\s*{season}.*episode\s*{episode}",
-        ]
-
-        for pattern in patterns:
-            if re.search(pattern, filename_lower):
-                return True
-
-        return False
-
-    async def get_series_episode(
-        self,
-        series: TVSeries,
-        season: int,
-        episode: int,
-    ) -> List[EpisodeResult]:
-        """Return episode download links from Vadapav."""
-        try:
-            # Find the series folder
-            series_entries = await self.get_series_entries_by_name(series.title)
-
-            if not series_entries:
-                logger.info(f"Series not found: {series.title}")
-                return []
-
-            results = []
-            for series_entry in series_entries:
-                # Get episode files for this season/episode
-                episode_files = await self.get_episode_files(
-                    series_entry.path, season, episode
-                )
-
-                for ep_file in episode_files:
-                    if ep_file.name.endswith(ALLOWED_EXTENSIONS):
-                        logger.info(f"Episode entry: {ep_file}")
-                        results.append(
-                            EpisodeResult(
-                                title=f"{series.title} S{season:02d}E{episode:02d}",
-                                season=season,
-                                episode=episode,
-                                quality=self.get_quality_from_name(ep_file.name),
-                                size_mb=ep_file.size / 1024 / 1024
-                                if ep_file.size
-                                else 0.0,
-                                download_url=ep_file.path,
-                                source_site=self.name,
-                                filename=ep_file.name,
-                            )
-                        )
-
-            return results
-        except Exception as e:
-            logger.warning(f"Error fetching episode from {self.name}", exc_info=e)
-            return []

@@ -36,8 +36,6 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 # Register providers
-register_provider(DummyProvider())
-register_provider(TestProvider())
 register_provider(VadapavProvider())
 register_provider(A111477Provider())
 

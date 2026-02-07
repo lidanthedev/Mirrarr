@@ -19,6 +19,7 @@ dependencies = [
     "beautifulsoup4>=4.14.3",
     "yt-dlp>=2026.2.4",
     "yt-dlp-ejs>=0.4.0",
+    "cachetools>=7.0.0",
 ]
 [tool.uv]
 override-dependencies = [
