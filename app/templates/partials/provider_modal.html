@@ -132,25 +132,17 @@
                     '&season=' + encodeURIComponent(season) +
                     '&episode=' + encodeURIComponent(episode);
 
-                fetch(url)
-                    .then(function (response) { return response.text(); })
-                    .then(function (html) {
-                        var toastContainer = document.getElementById('toast-container');
-                        if (toastContainer) {
-                            toastContainer.innerHTML = html;
-                        }
-                        // For episodes, refresh the series modal
-                        if (mediaType !== 'movie') {
-                            htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
-                        }
-                    });
+                fetch(url).then(function () {
+                    showToast('Download queued: ' + result.quality, 'success');
+                    // For episodes, refresh the series modal
+                    if (mediaType !== 'movie') {
+                        htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
+                    }
+                });
             }
 
             function showNoResultsToast() {
-                var toastContainer = document.getElementById('toast-container');
-                if (toastContainer) {
-                    toastContainer.innerHTML = '<div class="toast-enter p-4 bg-red-700 rounded-lg shadow-lg text-white flex items-center gap-3" x-data="{ show: true }" x-init="setTimeout(() => { $el.remove() }, 3000)"><svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg><span>No downloads available</span></div>';
-                }
+                showToast('No downloads available', 'error');
             }
 
             function updateStatus(text) {

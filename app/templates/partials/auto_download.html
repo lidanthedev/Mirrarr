@@ -1,18 +1,8 @@
-<!-- Toast Notification with Download Queue -->
-<div id="toast-download" class="toast-enter p-4 bg-green-700 rounded-lg shadow-lg text-white flex items-center gap-3"
-    x-data="{ show: true }" x-init="setTimeout(() => { $el.remove() }, 3000)">
-    <svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-    </svg>
-    <span>Download queued: {{ quality }}</span>
-</div>
+<!-- Auto Download Toast - Uses global showToast -->
 <script>
     // Log the download URL to console (simulated download)
     console.log('[DOWNLOAD QUEUED]', '{{ download_url }}');
 
-    // Auto-remove toast after 3 seconds if Alpine.js not available
-    setTimeout(function () {
-        var toast = document.getElementById('toast-download');
-        if (toast) toast.remove();
-    }, 3000);
+    // Show toast using global function
+    showToast('Download queued: {{ quality }}', 'success');
 </script>

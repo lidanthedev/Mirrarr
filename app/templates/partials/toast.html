@@ -1,5 +1,4 @@
-<!-- Toast Notification -->
-<div
-    class="toast-enter p-4 bg-{% if type == 'error' %}red{% elif type == 'success' %}green{% else %}slate{% endif %}-700 rounded-lg shadow-lg text-white">
-    {{ message }}
-</div>
+<!-- Toast Notification - Uses global showToast -->
+<script>
+    showToast('{{ message }}', '{{ type or "info" }}');
+</script>

@@ -86,6 +86,44 @@
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2">
     </div>
 
+    <!-- Global Toast Function -->
+    <script>
+        /**
+         * Shows a toast notification with the given message and type.
+         * @param {string} message - The message to display in the toast.
+         * @param {string} type - The type of toast ('success', 'error', 'info').
+         */
+        function showToast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toast-container');
+            if (!container) return;
+
+            var colors = {
+                success: 'bg-green-700',
+                error: 'bg-red-700',
+                info: 'bg-slate-700'
+            };
+
+            var icons = {
+                success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />',
+                error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />',
+                info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+            };
+
+            var toast = document.createElement('div');
+            toast.className = 'toast-enter p-4 ' + colors[type] + ' rounded-lg shadow-lg text-white flex items-center gap-3';
+            toast.innerHTML = '<svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                icons[type] + '</svg><span>' + message + '</span>';
+
+            container.appendChild(toast);
+
+            /** Auto-remove after 3 seconds */
+            setTimeout(function () {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 
