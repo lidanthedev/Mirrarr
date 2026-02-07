@@ -7,12 +7,12 @@
 
 ## 2. Technical Stack
 
-* **Language:** Python 3.10+
+* **Language:** Python 3.14+
 * **Web Framework:** FastAPI (Async)
 * **Templating:** **Jinja2** (Server-Side Rendering)
 * **Interactivity:** **HTMX** (For AJAX replacements, polling progress bars, and search without page reloads).
 * **Styling:** **TailwindCSS** (via CDN for simplicity) or Bootstrap.
-* **Task Queue:** Celery (with Redis).
+* **Task Queue:** In python with thread pool.
 * **Database:** SQLite (SQLModel).
 * **Metadata:** TMDB API.
 
@@ -91,9 +91,7 @@ Updated to include `templates` and `static` folders.
 │   └── /static              # CSS, Images, JS
 │       └── style.css
 ├── /tests
-├── .env
-└── requirements.txt         # Must include: fastapi, uvicorn[standard], jinja2, python-multipart, celery, redis, httpx, sqlmodel
-
+└── .env
 ```
 
 ## 6. Coding Style Guidelines
