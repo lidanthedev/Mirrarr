@@ -13,7 +13,7 @@ class DownloadResult(BaseModel):
 
     title: str
     quality: str
-    size_mb: float
+    size: int
     download_url: str
     provider_name: str = ""
     source_site: str
@@ -24,8 +24,12 @@ class DownloadResult(BaseModel):
 
 
 # Backward compatibility aliases
-MovieResult = DownloadResult
-EpisodeResult = DownloadResult
+class MovieResult(DownloadResult):
+    pass
+
+
+class EpisodeResult(DownloadResult):
+    pass
 
 
 class ProviderInterface(ABC):

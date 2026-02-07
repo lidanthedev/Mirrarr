@@ -15,10 +15,10 @@
         <div>
             <p class="font-bold text-lg">AUTO - Best Quality</p>
             <p class="text-sm text-white/80">{{ best_result.quality }} •
-                {% if best_result.size_mb >= 1024 %}
-                {{ "%.1f"|format(best_result.size_mb / 1024) }} GB
+                {% if best_result.size >= 1073741824 %}
+                {{ "%.1f"|format(best_result.size / 1073741824) }} GB
                 {% else %}
-                {{ "%.0f"|format(best_result.size_mb) }} MB
+                {{ "%.0f"|format(best_result.size / 1048576) }} MB
                 {% endif %}
                 • {{ best_result.source_site }}</p>
         </div>

@@ -1,6 +1,7 @@
 """Search service for aggregating results from providers."""
 
 import asyncio
+import logging
 from typing import List, Union
 
 from app.providers import ProviderRegistry
@@ -8,6 +9,8 @@ from app.providers.base import MovieResult, EpisodeResult
 from app.models.media import Movie, TVSeries
 from app.services.tmdb import get_movie_details, get_series_details
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 async def get_provider_results_for_movie(
@@ -29,10 +32,12 @@ async def get_provider_results_for_movie(
         try:
             return await asyncio.wait_for(provider.get_movie(movie), timeout=timeout)
         except asyncio.TimeoutError:
-            print(f"Timeout fetching movie from {provider.name} after {timeout}s")
+            logger.warning(
+                f"Timeout fetching movie from {provider.name} after {timeout}s"
+            )
             return []
         except Exception as e:
-            print(f"Error fetching movie from {provider.name}: {e}")
+            logger.error(f"Error fetching movie from {provider.name}: {e}", exc_info=e)
             return []
 
     provider_results = await asyncio.gather(
@@ -69,10 +74,14 @@ async def get_provider_results_for_episode(
                 provider.get_series_episode(series, season, episode), timeout=timeout
             )
         except asyncio.TimeoutError:
-            print(f"Timeout fetching episode from {provider.name} after {timeout}s")
+            logger.warning(
+                f"Timeout fetching episode from {provider.name} after {timeout}s"
+            )
             return []
         except Exception as e:
-            print(f"Error fetching episode from {provider.name}: {e}")
+            logger.error(
+                f"Error fetching episode from {provider.name}: {e}", exc_info=e
+            )
             return []
 
     provider_results = await asyncio.gather(
@@ -108,9 +117,11 @@ async def get_single_provider_results_for_movie(
             )
             results.extend(provider_results)
         except asyncio.TimeoutError:
-            print(f"Timeout fetching movie from {provider.name} after {timeout}s")
+            logger.warning(
+                f"Timeout fetching movie from {provider.name} after {timeout}s"
+            )
         except Exception as e:
-            print(f"Error fetching movie from {provider.name}: {e}")
+            logger.error(f"Error fetching movie from {provider.name}: {e}", exc_info=e)
 
     return movie, results
 
@@ -139,9 +150,13 @@ async def get_single_provider_results_for_episode(
             )
             results.extend(provider_results)
         except asyncio.TimeoutError:
-            print(f"Timeout fetching episode from {provider.name} after {timeout}s")
+            logger.warning(
+                f"Timeout fetching episode from {provider.name} after {timeout}s"
+            )
         except Exception as e:
-            print(f"Error fetching episode from {provider.name}: {e}")
+            logger.error(
+                f"Error fetching episode from {provider.name}: {e}", exc_info=e
+            )
 
     return series, results
 
@@ -175,7 +190,7 @@ def select_best_result(
         quality = result.quality.split()[0].lower() if result.quality else "480p"
         q_score = quality_scores.get(quality, 0)
         # Return tuple: (quality descending, size ascending)
-        return (q_score, -result.size_mb)
+        return (q_score, -result.size)
 
     # Sort by quality (desc), then by size (asc via negative)
     return max(results, key=score)

@@ -22,7 +22,7 @@ class DummyProvider(ProviderInterface):
             MovieResult(
                 title=movie.title,
                 quality="2160p UHD",
-                size_mb=15000.0,
+                size=15728640000,
                 download_url=f"https://example.com/movie/{movie.id}/2160p",
                 source_site=self.name,
                 filename=f"{movie.title}.2160p.UHD.mkv",
@@ -30,7 +30,7 @@ class DummyProvider(ProviderInterface):
             MovieResult(
                 title=movie.title,
                 quality="1080p BluRay",
-                size_mb=8000.0,
+                size=8388608000,
                 download_url=f"https://example.com/movie/{movie.id}/1080p",
                 source_site=self.name,
                 filename=f"{movie.title}.1080p.BluRay.mkv",
@@ -38,7 +38,7 @@ class DummyProvider(ProviderInterface):
             MovieResult(
                 title=movie.title,
                 quality="1080p WEB-DL",
-                size_mb=4500.0,
+                size=4718592000,
                 download_url=f"https://example.com/movie/{movie.id}/1080p-web",
                 source_site=self.name,
                 filename=f"{movie.title}.1080p.WEB-DL.mkv",
@@ -46,7 +46,7 @@ class DummyProvider(ProviderInterface):
             MovieResult(
                 title=movie.title,
                 quality="720p WEB-DL",
-                size_mb=2500.0,
+                size=2621440000,
                 download_url=f"https://example.com/movie/{movie.id}/720p",
                 source_site=self.name,
                 filename=f"{movie.title}.720p.WEB-DL.mkv",
@@ -54,7 +54,7 @@ class DummyProvider(ProviderInterface):
             MovieResult(
                 title=movie.title,
                 quality="480p HDTV",
-                size_mb=700.0,
+                size=734003200,
                 download_url=f"https://example.com/movie/{movie.id}/480p",
                 source_site=self.name,
                 filename=f"{movie.title}.480p.HDTV.mkv",
@@ -74,7 +74,7 @@ class DummyProvider(ProviderInterface):
                 season=season,
                 episode=episode,
                 quality="1080p WEB-DL",
-                size_mb=1200.0,
+                size=1258291200,
                 download_url=f"https://example.com/tv/{series.id}/s{season}e{episode}/1080p",
                 source_site=self.name,
                 filename=f"{series.title}.S{season:02d}E{episode:02d}.1080p.WEB-DL.mkv",
@@ -84,7 +84,7 @@ class DummyProvider(ProviderInterface):
                 season=season,
                 episode=episode,
                 quality="720p HDTV",
-                size_mb=450.0,
+                size=471859200,
                 download_url=f"https://example.com/tv/{series.id}/s{season}e{episode}/720p",
                 source_site=self.name,
                 filename=f"{series.title}.S{season:02d}E{episode:02d}.720p.HDTV.mkv",

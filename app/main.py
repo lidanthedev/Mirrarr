@@ -1,3 +1,4 @@
+from app.providers.rivestream_provider import RiveStreamProvider
 from app.providers.vadapav_provider import VadapavProvider
 from pathlib import Path
 
@@ -38,6 +39,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 # Register providers
 register_provider(VadapavProvider())
 register_provider(A111477Provider())
+register_provider(RiveStreamProvider())
 
 # Include routers
 app.include_router(ui_router)

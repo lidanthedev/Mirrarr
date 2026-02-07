@@ -230,7 +230,7 @@ class DirectoryListProvider(ProviderInterface):
                         MovieResult(
                             title=movie.title,
                             quality=self.get_quality_from_name(movie_entry.name),
-                            size_mb=movie_entry.size / 1024 / 1024,
+                            size=int(movie_entry.size),
                             download_url=movie_entry.path,
                             source_site=self.name,
                             filename=movie_entry.name,
@@ -348,9 +348,7 @@ class DirectoryListProvider(ProviderInterface):
                                 season=season,
                                 episode=episode,
                                 quality=self.get_quality_from_name(ep_file.name),
-                                size_mb=ep_file.size / 1024 / 1024
-                                if ep_file.size
-                                else 0.0,
+                                size=int(ep_file.size) if ep_file.size else 0,
                                 download_url=ep_file.path,
                                 source_site=self.name,
                                 filename=ep_file.name,
