@@ -16,24 +16,28 @@
     <div class="mt-2 ml-7 space-y-1">
         {% for result in provider_results %}
         <button
-            class="provider-result-item flex items-center justify-between w-full p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors group/item text-left"
+            class="provider-result-item flex items-center gap-2 w-full p-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors group/item text-left"
             data-quality="{{ result.quality }}" data-size-mb="{{ result.size_mb }}"
             data-download-url="{{ result.download_url }}" data-source="{{ result.source_site }}"
             hx-get="/download/queue?url={{ result.download_url | urlencode }}&quality={{ result.quality | urlencode }}&source={{ result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
             hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
             hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
             hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}>
-            <div class="flex items-center gap-3">
-                <div class="p-2 bg-slate-600 rounded-lg group-hover/item:bg-primary-600 transition-colors">
-                    <svg class="h-4 w-4 text-slate-300 group-hover/item:text-white transition-colors" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                </div>
-                <span class="font-medium text-white">{{ result.quality }}</span>
+            <div class="p-1.5 bg-slate-600 rounded group-hover/item:bg-primary-600 transition-colors flex-shrink-0">
+                <svg class="h-3.5 w-3.5 text-slate-300 group-hover/item:text-white transition-colors" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
             </div>
-            <span class="text-sm font-medium text-slate-300">
+            <span class="font-medium text-white text-sm flex-shrink-0">{{ result.quality }}</span>
+            {% if result.filename %}
+            <span class="text-xs text-slate-500 truncate flex-1 min-w-0" title="{{ result.filename }}">{{
+                result.filename }}</span>
+            {% else %}
+            <span class="flex-1"></span>
+            {% endif %}
+            <span class="text-sm font-medium text-slate-300 flex-shrink-0">
                 {% if result.size_mb >= 1024 %}
                 {{ "%.1f"|format(result.size_mb / 1024) }} GB
                 {% else %}

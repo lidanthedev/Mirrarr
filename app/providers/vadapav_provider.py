@@ -156,13 +156,46 @@ class VadapavProvider(ProviderInterface):
         return name.strip().lower()
 
     def get_quality_from_name(self, name: str) -> str:
-        """Return quality from name."""
-        if "2160p" in name:
-            return "2160p"
-        elif "1080p" in name:
-            return "1080p"
-        elif "720p" in name:
-            return "720p"
+        """Return quality from name including resolution and type."""
+        name_lower = name.lower()
+
+        # Detect resolution
+        resolution = ""
+        if "2160p" in name_lower or "4k" in name_lower or "uhd" in name_lower:
+            resolution = "2160p"
+        elif "1080p" in name_lower:
+            resolution = "1080p"
+        elif "720p" in name_lower:
+            resolution = "720p"
+        elif "480p" in name_lower:
+            resolution = "480p"
+
+        # Detect quality type
+        quality_type = ""
+        if "remux" in name_lower:
+            quality_type = "REMUX"
+        elif "bluray" in name_lower or "blu-ray" in name_lower or "bdrip" in name_lower:
+            quality_type = "BluRay"
+        elif "web-dl" in name_lower or "webdl" in name_lower:
+            quality_type = "WEB-DL"
+        elif "webrip" in name_lower or "web-rip" in name_lower:
+            quality_type = "WEBRip"
+        elif "hdtv" in name_lower:
+            quality_type = "HDTV"
+        elif "dvdrip" in name_lower or "dvd" in name_lower:
+            quality_type = "DVDRip"
+        elif "cam" in name_lower or "hdcam" in name_lower:
+            quality_type = "CAM"
+        elif "web" in name_lower:
+            quality_type = "WEB"
+
+        # Combine resolution and type
+        if resolution and quality_type:
+            return f"{resolution} {quality_type}"
+        elif resolution:
+            return resolution
+        elif quality_type:
+            return quality_type
         return "Unknown"
 
     async def get_movie(self, movie: Movie) -> List[MovieResult]:
@@ -180,6 +213,7 @@ class VadapavProvider(ProviderInterface):
                             size_mb=movie_entry.size / 1024 / 1024,
                             download_url=movie_entry.path,
                             source_site=self.name,
+                            filename=movie_entry.name,
                         )
                     )
             return results
@@ -306,6 +340,7 @@ class VadapavProvider(ProviderInterface):
                                 else 0.0,
                                 download_url=ep_file.path,
                                 source_site=self.name,
+                                filename=ep_file.name,
                             )
                         )
 

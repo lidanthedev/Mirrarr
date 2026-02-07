@@ -25,6 +25,7 @@ class DummyProvider(ProviderInterface):
                 size_mb=15000.0,
                 download_url=f"https://example.com/movie/{movie.id}/2160p",
                 source_site=self.name,
+                filename=f"{movie.title}.2160p.UHD.mkv",
             ),
             MovieResult(
                 title=movie.title,
@@ -32,6 +33,7 @@ class DummyProvider(ProviderInterface):
                 size_mb=8000.0,
                 download_url=f"https://example.com/movie/{movie.id}/1080p",
                 source_site=self.name,
+                filename=f"{movie.title}.1080p.BluRay.mkv",
             ),
             MovieResult(
                 title=movie.title,
@@ -39,6 +41,7 @@ class DummyProvider(ProviderInterface):
                 size_mb=4500.0,
                 download_url=f"https://example.com/movie/{movie.id}/1080p-web",
                 source_site=self.name,
+                filename=f"{movie.title}.1080p.WEB-DL.mkv",
             ),
             MovieResult(
                 title=movie.title,
@@ -46,6 +49,7 @@ class DummyProvider(ProviderInterface):
                 size_mb=2500.0,
                 download_url=f"https://example.com/movie/{movie.id}/720p",
                 source_site=self.name,
+                filename=f"{movie.title}.720p.WEB-DL.mkv",
             ),
             MovieResult(
                 title=movie.title,
@@ -53,6 +57,7 @@ class DummyProvider(ProviderInterface):
                 size_mb=700.0,
                 download_url=f"https://example.com/movie/{movie.id}/480p",
                 source_site=self.name,
+                filename=f"{movie.title}.480p.HDTV.mkv",
             ),
         ]
 
@@ -72,6 +77,7 @@ class DummyProvider(ProviderInterface):
                 size_mb=1200.0,
                 download_url=f"https://example.com/tv/{series.id}/s{season}e{episode}/1080p",
                 source_site=self.name,
+                filename=f"{series.title}.S{season:02d}E{episode:02d}.1080p.WEB-DL.mkv",
             ),
             EpisodeResult(
                 title=f"{series.title} S{season:02d}E{episode:02d}",
@@ -81,5 +87,6 @@ class DummyProvider(ProviderInterface):
                 size_mb=450.0,
                 download_url=f"https://example.com/tv/{series.id}/s{season}e{episode}/720p",
                 source_site=self.name,
+                filename=f"{series.title}.S{season:02d}E{episode:02d}.720p.HDTV.mkv",
             ),
         ]

@@ -28,6 +28,7 @@ class TestProvider(ProviderInterface):
                 size_mb=25000.0,
                 download_url=f"https://test-provider.com/movie/{movie.id}/remux",
                 source_site=self.name,
+                filename=f"{movie.title}.1080p.REMUX.mkv",
             ),
             MovieResult(
                 title=movie.title,
@@ -35,6 +36,7 @@ class TestProvider(ProviderInterface):
                 size_mb=12000.0,
                 download_url=f"https://test-provider.com/movie/{movie.id}/bluray",
                 source_site=self.name,
+                filename=f"{movie.title}.1080p.BluRay.mkv",
             ),
             MovieResult(
                 title=movie.title,
@@ -42,6 +44,7 @@ class TestProvider(ProviderInterface):
                 size_mb=3500.0,
                 download_url=f"https://test-provider.com/movie/{movie.id}/720p",
                 source_site=self.name,
+                filename=f"{movie.title}.720p.WEB-DL.mkv",
             ),
         ]
 
@@ -63,6 +66,7 @@ class TestProvider(ProviderInterface):
                 size_mb=2500.0,
                 download_url=f"https://test-provider.com/tv/{series.id}/s{season}e{episode}/amzn",
                 source_site=self.name,
+                filename=f"{series.title}.S{season:02d}E{episode:02d}.1080p.AMZN.WEB-DL.mkv",
             ),
             EpisodeResult(
                 title=f"{series.title} S{season:02d}E{episode:02d}",
@@ -72,5 +76,6 @@ class TestProvider(ProviderInterface):
                 size_mb=800.0,
                 download_url=f"https://test-provider.com/tv/{series.id}/s{season}e{episode}/720p",
                 source_site=self.name,
+                filename=f"{series.title}.S{season:02d}E{episode:02d}.720p.WEB-DL.mkv",
             ),
         ]

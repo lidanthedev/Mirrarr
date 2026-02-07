@@ -16,6 +16,7 @@ class MovieResult(BaseModel):
     size_mb: float
     download_url: str
     source_site: str
+    filename: str = ""  # Original filename from provider
 
 
 class EpisodeResult(BaseModel):
@@ -28,6 +29,7 @@ class EpisodeResult(BaseModel):
     size_mb: float
     download_url: str
     source_site: str
+    filename: str = ""  # Original filename from provider
 
 
 class ProviderInterface(ABC):
