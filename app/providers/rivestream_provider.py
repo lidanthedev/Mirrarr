@@ -10,7 +10,8 @@ from typing import List
 from app.providers.base import ProviderInterface, MovieResult, EpisodeResult
 from app.models.media import Movie, TVSeries
 
-SECRET_KEY = "LTVlZTA5MTAw"
+SECRET_KEY_MOVIES = "LTVlZTA5MTAw"
+SECRET_KEY_TV = "NGFmNjhjZDg="
 
 cache = TTLCache(maxsize=100, ttl=1800)
 
@@ -49,7 +50,7 @@ class RiveStreamProvider(ProviderInterface):
             "requestID": "movieVideoProvider",
             "id": movie.id,
             "service": service,
-            "secretKey": SECRET_KEY,
+            "secretKey": SECRET_KEY_MOVIES,
             "proxyMode": "noProxy",
         }
         response: Response = await niquests.aget(
@@ -66,9 +67,10 @@ class RiveStreamProvider(ProviderInterface):
                     provider_name=self.name,
                     title=movie.title,
                     download_url=source["url"],
-                    quality=f"{source['quality']}-{source['format']}",
+                    quality=f"{source['quality']}p-{source['format']}",
                     size=source.get("size", 0),
                     source_site=self.name,
+                    filename=f"{movie.title} - {source['quality']}p - {service}.{source['format']}",
                 )
             )
         cache[cache_key] = movies
@@ -93,14 +95,79 @@ class RiveStreamProvider(ProviderInterface):
 
         return await self.get_movie_from_all_services(movie)
 
+    async def get_series_episode_with_service(
+        self, series: TVSeries, season: int, episode: int, service: str
+    ) -> List[EpisodeResult]:
+        """Return list of episodes with a service."""
+        cache_key = f"series-{series.id}-s{season}-e{episode}-{service}"
+        if cache_key in cache:
+            return cache[cache_key]
+
+        params = {
+            "requestID": "tvVideoProvider",
+            "id": series.id,
+            "season": season,
+            "episode": episode,
+            "service": service,
+            "secretKey": SECRET_KEY_TV,
+            "proxyMode": "noProxy",
+        }
+        response: Response = await niquests.aget(
+            "https://rivestream.org/api/backendfetch", params=params
+        )
+        try:
+            data = response.json()["data"]
+        except Exception:
+            print(f"Error decoding JSON from {service}: {response.text}")
+            return []
+        if data is None or "sources" not in data:
+            return []
+        sources = data["sources"]
+        episodes = []
+        for source in sources:
+            episodes.append(
+                EpisodeResult(
+                    provider_name=self.name,
+                    title=f"{series.title} S{season:02d}E{episode:02d}",
+                    season=season,
+                    episode=episode,
+                    download_url=source["url"],
+                    quality=f"{source['quality']}p-{source['format']}",
+                    size=source.get("size", 0),
+                    source_site=self.name,
+                    filename=f"{series.title} S{season:02d}E{episode:02d} - {source['quality']}p - {service}.{source['format']}",
+                )
+            )
+        cache[cache_key] = episodes
+        return episodes
+
+    async def get_series_episode_from_all_services(
+        self, series: TVSeries, season: int, episode: int
+    ) -> List[EpisodeResult]:
+        """Return list of episodes from all services."""
+        services = await self.get_services()
+
+        tasks = [
+            self.get_series_episode_with_service(series, season, episode, service)
+            for service in services
+        ]
+        results = await asyncio.gather(*tasks)
+
+        episodes = []
+        for result in results:
+            if result is None:
+                continue
+            episodes.extend(result)
+        return episodes
+
     async def get_series_episode(
         self,
         series: TVSeries,
         season: int,
         episode: int,
     ) -> List[EpisodeResult]:
-        """Return dummy episode download links."""
-        return []
+        """Return episode download links from all services."""
+        return await self.get_series_episode_from_all_services(series, season, episode)
 
     def get_yt_opts(self) -> dict[str, Any]:
         return {

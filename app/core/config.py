@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # Provider settings
-    provider_timeout: int = 30  # Timeout for provider searches in seconds
+    provider_timeout: int = 60  # Timeout for provider searches in seconds
 
     # App settings
     debug: bool = False
