@@ -7,6 +7,7 @@ from app.providers import ProviderRegistry
 from app.providers.base import MovieResult, EpisodeResult
 from app.models.media import Movie, TVSeries
 from app.services.tmdb import get_movie_details, get_series_details
+from app.core.config import get_settings
 
 
 async def get_provider_results_for_movie(
@@ -19,12 +20,17 @@ async def get_provider_results_for_movie(
     Returns:
         Tuple of (Movie, list of MovieResult)
     """
+    settings = get_settings()
+    timeout = settings.provider_timeout
     movie = get_movie_details(tmdb_id)
     providers = ProviderRegistry.all()
 
     async def fetch_from_provider(provider):
         try:
-            return await provider.get_movie(movie)
+            return await asyncio.wait_for(provider.get_movie(movie), timeout=timeout)
+        except asyncio.TimeoutError:
+            print(f"Timeout fetching movie from {provider.name} after {timeout}s")
+            return []
         except Exception as e:
             print(f"Error fetching movie from {provider.name}: {e}")
             return []
@@ -52,12 +58,19 @@ async def get_provider_results_for_episode(
     Returns:
         Tuple of (TVSeries, list of EpisodeResult)
     """
+    settings = get_settings()
+    timeout = settings.provider_timeout
     series = get_series_details(tmdb_id)
     providers = ProviderRegistry.all()
 
     async def fetch_from_provider(provider):
         try:
-            return await provider.get_series_episode(series, season, episode)
+            return await asyncio.wait_for(
+                provider.get_series_episode(series, season, episode), timeout=timeout
+            )
+        except asyncio.TimeoutError:
+            print(f"Timeout fetching episode from {provider.name} after {timeout}s")
+            return []
         except Exception as e:
             print(f"Error fetching episode from {provider.name}: {e}")
             return []
@@ -82,14 +95,20 @@ async def get_single_provider_results_for_movie(
     Returns:
         Tuple of (Movie, list of MovieResult)
     """
+    settings = get_settings()
+    timeout = settings.provider_timeout
     movie = get_movie_details(tmdb_id)
     results: List[MovieResult] = []
 
     provider = ProviderRegistry.get(provider_name)
     if provider:
         try:
-            provider_results = await provider.get_movie(movie)
+            provider_results = await asyncio.wait_for(
+                provider.get_movie(movie), timeout=timeout
+            )
             results.extend(provider_results)
+        except asyncio.TimeoutError:
+            print(f"Timeout fetching movie from {provider.name} after {timeout}s")
         except Exception as e:
             print(f"Error fetching movie from {provider.name}: {e}")
 
@@ -107,16 +126,20 @@ async def get_single_provider_results_for_episode(
     Returns:
         Tuple of (TVSeries, list of EpisodeResult)
     """
+    settings = get_settings()
+    timeout = settings.provider_timeout
     series = get_series_details(tmdb_id)
     results: List[EpisodeResult] = []
 
     provider = ProviderRegistry.get(provider_name)
     if provider:
         try:
-            provider_results = await provider.get_series_episode(
-                series, season, episode
+            provider_results = await asyncio.wait_for(
+                provider.get_series_episode(series, season, episode), timeout=timeout
             )
             results.extend(provider_results)
+        except asyncio.TimeoutError:
+            print(f"Timeout fetching episode from {provider.name} after {timeout}s")
         except Exception as e:
             print(f"Error fetching episode from {provider.name}: {e}")
 
