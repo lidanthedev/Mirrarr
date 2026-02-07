@@ -42,23 +42,19 @@
             </button>
         </div>
 
-        <!-- AUTO Button - Click to auto-select best and queue download -->
+        <!-- AUTO Button - Uses already-loaded provider results from DOM -->
         <div class="p-4 bg-slate-900/50 border-b border-slate-700">
-            <button {% if media_type=='movie' %} hx-get="/movie/auto/{{ tmdb_id }}"
-                hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
-                hx-get="/episode/auto/{{ tmdb_id }}/{{ season }}/{{ episode }}"
-                hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
-                hx-target="#toast-container" hx-swap="innerHTML"
+            <button id="auto-select-btn"
                 class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25 cursor-pointer">
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-white/20 rounded-lg">
                         <!-- Normal lightning icon -->
-                        <svg class="h-6 w-6 htmx-hide-on-request" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg id="auto-btn-icon" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        <!-- Loading spinner (shown during request) -->
-                        <svg class="h-6 w-6 animate-spin htmx-show-on-request" fill="none" stroke="currentColor"
+                        <!-- Loading spinner (hidden by default) -->
+                        <svg id="auto-btn-spinner" class="h-6 w-6 animate-spin hidden" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" stroke-width="2" stroke-dasharray="31.4 31.4"
                                 stroke-linecap="round" />
@@ -66,7 +62,7 @@
                     </div>
                     <div>
                         <p class="font-bold text-lg">AUTO - Best Quality</p>
-                        <p class="text-sm text-white/80">Click to auto-select best download</p>
+                        <p id="auto-btn-status" class="text-sm text-white/80">Click to auto-select best download</p>
                     </div>
                 </div>
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,6 +71,170 @@
                 </svg>
             </button>
         </div>
+
+        <script>
+            (function () {
+                var totalProviders = {{ provider_names | length
+            }};
+            var loadedProviders = 0;
+            var mediaType = '{{ media_type }}';
+            var tmdbId = '{{ tmdb_id }}';
+            var season = '{{ season }}';
+            var episode = '{{ episode }}';
+            var allLoaded = false;
+            var autoClicked = false;
+            var collectedResults = [];
+
+            function getQualityScore(quality) {
+                var q = quality.toUpperCase();
+                if (q.includes('4K') || q.includes('2160')) return 4;
+                if (q.includes('1080')) return 3;
+                if (q.includes('720')) return 2;
+                if (q.includes('480')) return 1;
+                return 0;
+            }
+
+            function collectResults() {
+                var items = document.querySelectorAll('.provider-result-item');
+                var results = [];
+                items.forEach(function (item) {
+                    results.push({
+                        quality: item.dataset.quality || '',
+                        sizeMb: parseFloat(item.dataset.sizeMb) || 0,
+                        downloadUrl: item.dataset.downloadUrl || '',
+                        source: item.dataset.source || ''
+                    });
+                });
+                return results;
+            }
+
+            function findBestFromResults(results) {
+                var best = null;
+                var bestScore = -1;
+
+                results.forEach(function (r) {
+                    var score = getQualityScore(r.quality) * 10000 + r.sizeMb;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = r;
+                    }
+                });
+
+                return best;
+            }
+
+            function queueDownloadAndShowToast(result) {
+                var url = '/download/queue?url=' + encodeURIComponent(result.downloadUrl) +
+                    '&quality=' + encodeURIComponent(result.quality) +
+                    '&source=' + encodeURIComponent(result.source) +
+                    '&media_type=' + encodeURIComponent(mediaType) +
+                    '&tmdb_id=' + encodeURIComponent(tmdbId) +
+                    '&season=' + encodeURIComponent(season) +
+                    '&episode=' + encodeURIComponent(episode);
+
+                fetch(url)
+                    .then(function (response) { return response.text(); })
+                    .then(function (html) {
+                        var toastContainer = document.getElementById('toast-container');
+                        if (toastContainer) {
+                            toastContainer.innerHTML = html;
+                        }
+                        // For episodes, refresh the series modal
+                        if (mediaType !== 'movie') {
+                            htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
+                        }
+                    });
+            }
+
+            function showNoResultsToast() {
+                var toastContainer = document.getElementById('toast-container');
+                if (toastContainer) {
+                    toastContainer.innerHTML = '<div class="toast-enter p-4 bg-red-700 rounded-lg shadow-lg text-white flex items-center gap-3" x-data="{ show: true }" x-init="setTimeout(() => { $el.remove() }, 3000)"><svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg><span>No downloads available</span></div>';
+                }
+            }
+
+            function updateStatus(text) {
+                var statusEl = document.getElementById('auto-btn-status');
+                if (statusEl) statusEl.textContent = text;
+            }
+
+            function showLoading(show) {
+                var icon = document.getElementById('auto-btn-icon');
+                var spinner = document.getElementById('auto-btn-spinner');
+                if (icon) icon.classList.toggle('hidden', show);
+                if (spinner) spinner.classList.toggle('hidden', !show);
+            }
+
+            // Track provider loading
+            document.body.addEventListener('htmx:afterSwap', function (event) {
+                if (event.detail.target && event.detail.target.id &&
+                    event.detail.target.id.startsWith('provider-')) {
+                    loadedProviders++;
+
+                    // Collect results from this provider
+                    var newResults = collectResults();
+                    collectedResults = newResults;
+
+                    if (!autoClicked) {
+                        updateStatus('Loading providers (' + loadedProviders + '/' + totalProviders + ')...');
+                    }
+
+                    if (loadedProviders >= totalProviders) {
+                        allLoaded = true;
+                        if (!autoClicked) {
+                            var best = findBestFromResults(collectedResults);
+                            if (best) {
+                                updateStatus('Ready - Best: ' + best.quality);
+                            } else {
+                                updateStatus('No downloads available');
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Handle AUTO button click
+            document.getElementById('auto-select-btn').addEventListener('click', function () {
+                if (autoClicked) return; // Prevent double clicks
+                autoClicked = true;
+
+                // Check if we already have results
+                if (allLoaded) {
+                    var best = findBestFromResults(collectedResults);
+                    if (best) {
+                        // Queue download, show toast, then close modal
+                        queueDownloadAndShowToast(best);
+                        var modal = document.getElementById('provider-modal');
+                        if (modal) modal.remove();
+                    } else {
+                        showNoResultsToast();
+                        var modal = document.getElementById('provider-modal');
+                        if (modal) modal.remove();
+                    }
+                } else {
+                    // Still loading - show spinner and wait
+                    showLoading(true);
+                    updateStatus('Waiting for providers...');
+
+                    // Wait for all providers, then queue and close
+                    var checkInterval = setInterval(function () {
+                        if (allLoaded) {
+                            clearInterval(checkInterval);
+                            var best = findBestFromResults(collectedResults);
+                            if (best) {
+                                queueDownloadAndShowToast(best);
+                            } else {
+                                showNoResultsToast();
+                            }
+                            // Close modal after queuing
+                            var modal = document.getElementById('provider-modal');
+                            if (modal) modal.remove();
+                        }
+                    }, 100);
+                }
+            });
+        }) ();
+        </script>
 
         <!-- Provider Results - Each loads independently -->
         <div class="overflow-y-auto max-h-80 p-4 space-y-3">

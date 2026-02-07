@@ -16,11 +16,13 @@
     <div class="mt-2 ml-7 space-y-1">
         {% for result in provider_results %}
         <button
+            class="provider-result-item flex items-center justify-between w-full p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors group/item text-left"
+            data-quality="{{ result.quality }}" data-size-mb="{{ result.size_mb }}"
+            data-download-url="{{ result.download_url }}" data-source="{{ result.source_site }}"
             hx-get="/download/queue?url={{ result.download_url | urlencode }}&quality={{ result.quality | urlencode }}&source={{ result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
             hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
             hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
-            hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
-            class="flex items-center justify-between w-full p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors group/item text-left">
+            hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}>
             <div class="flex items-center gap-3">
                 <div class="p-2 bg-slate-600 rounded-lg group-hover/item:bg-primary-600 transition-colors">
                     <svg class="h-4 w-4 text-slate-300 group-hover/item:text-white transition-colors" fill="none"
