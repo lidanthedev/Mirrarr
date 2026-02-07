@@ -2,22 +2,55 @@
 
 import logging
 import niquests
-import asyncio
+import re
 from typing import List
 
 from app.providers.base import ProviderInterface, MovieResult, EpisodeResult
 from app.models.media import Movie, TVSeries
 from bs4 import BeautifulSoup
-from collections import namedtuple
+from typing import NamedTuple
 from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 BASE_URL = "https://vadapav.mov"
+ALLOWED_EXTENSIONS = video_extensions = (
+    # Common & Modern
+    "mp4",
+    "m4v",
+    "mkv",
+    "webm",
+    "mov",
+    "avi",
+    "wmv",
+    # High Definition / Transport Streams
+    "mts",
+    "m2ts",
+    "ts",
+    "avchd",
+    # Legacy / Mobile
+    "flv",
+    "vob",
+    "ogv",
+    "3gp",
+    "3g2",
+    "mjp",
+    "m1v",
+    "m2v",
+    # Professional / Flash / Other
+    "f4v",
+    "swf",
+    "asf",
+    "qt",
+)
 
-# Updated Named Tuple to include size
-FileEntry = namedtuple("FileEntry", ["name", "path", "size"])
+
+# Typed Named Tuple for file entries
+class FileEntry(NamedTuple):
+    name: str
+    path: str
+    size: float
 
 
 async def get_directory_contents(target_url):
@@ -94,7 +127,7 @@ class VadapavProvider(ProviderInterface):
             entry_name_lower = entry.name.lower()
 
             # Check if it's a direct video file that matches the movie name
-            if entry.name.endswith((".mkv", ".mp4", ".avi")):
+            if entry.name.endswith(ALLOWED_EXTENSIONS):
                 # Check if movie name appears in the filename
                 if name_lower in entry_name_lower or self._normalize_name(
                     name_lower
@@ -108,14 +141,13 @@ class VadapavProvider(ProviderInterface):
                     # Get files inside the folder
                     folder_contents = await get_directory_contents(entry.path)
                     for file_entry in folder_contents:
-                        if file_entry.name.endswith((".mkv", ".mp4", ".avi")):
+                        if file_entry.name.endswith(ALLOWED_EXTENSIONS):
                             results.append(file_entry)
 
         return results
 
     def _normalize_name(self, name: str) -> str:
         """Normalize a name for fuzzy matching by removing special chars."""
-        import re
 
         # Remove year in parentheses, dots, dashes, underscores
         name = re.sub(r"\(\d{4}\)", "", name)
@@ -139,7 +171,7 @@ class VadapavProvider(ProviderInterface):
             movie_entries = await self.get_movie_entries_by_name(movie.title)
             results = []
             for movie_entry in movie_entries:
-                if movie_entry.name.endswith((".mkv", ".mp4", ".avi")):
+                if movie_entry.name.endswith(ALLOWED_EXTENSIONS):
                     logger.info(f"Movie entry: {movie_entry}")
                     results.append(
                         MovieResult(
@@ -155,32 +187,129 @@ class VadapavProvider(ProviderInterface):
             logger.warning(f"Error fetching movie from {self.name}", exc_info=e)
             return []
 
+    async def get_series_entries_by_name(self, name: str) -> List[FileEntry]:
+        """Return list of series folder entries by name.
+
+        Series can be:
+        1. A folder like /shows/Breaking Bad/
+        2. Inside that folder, episodes directly or season folders
+        """
+        tv_entries = await self.get_tv_entries()
+        name_lower = name.lower()
+
+        for entry in tv_entries:
+            entry_name_lower = entry.name.lower()
+
+            # Check if folder name matches series name
+            if name_lower in entry_name_lower or self._normalize_name(
+                name_lower
+            ) in self._normalize_name(entry_name_lower):
+                return [entry]
+
+        return []
+
+    async def get_episode_files(
+        self,
+        series_path: str,
+        season: int,
+        episode: int,
+    ) -> List[FileEntry]:
+        """Find episode files for a specific season and episode.
+
+        Structure can be:
+        1. /shows/Series Name/Season X/ - episodes in season folder
+        2. /shows/Series Name/ - episodes directly in series folder
+        """
+        results = []
+        folder_contents = await get_directory_contents(series_path)
+
+        # Look for season folder first (e.g., "Season 1", "Season 01", "S01")
+        season_patterns = [
+            f"season {season}",
+            f"season {season:02d}",
+            f"s{season:02d}",
+            f"s{season}",
+        ]
+
+        for entry in folder_contents:
+            entry_name_lower = entry.name.lower()
+
+            # Check if this is a season folder
+            for pattern in season_patterns:
+                if pattern in entry_name_lower:
+                    # Found season folder, get episodes from it
+                    season_contents = await get_directory_contents(entry.path)
+                    for ep_entry in season_contents:
+                        if self._matches_episode(ep_entry.name, season, episode):
+                            results.append(ep_entry)
+                    break
+
+            # Also check if episodes are directly in series folder
+            if entry.name.endswith((".mkv", ".mp4", ".avi")):
+                if self._matches_episode(entry.name, season, episode):
+                    results.append(entry)
+
+        return results
+
+    def _matches_episode(self, filename: str, season: int, episode: int) -> bool:
+        """Check if filename matches the season and episode number."""
+        filename_lower = filename.lower()
+
+        # Common patterns: S01E01, s01e01, 1x01, etc.
+        patterns = [
+            rf"s{season:02d}e{episode:02d}",
+            rf"s{season}e{episode}",
+            rf"{season}x{episode:02d}",
+            rf"{season}x{episode}",
+            rf"season\s*{season}.*episode\s*{episode}",
+        ]
+
+        for pattern in patterns:
+            if re.search(pattern, filename_lower):
+                return True
+
+        return False
+
     async def get_series_episode(
         self,
         series: TVSeries,
         season: int,
         episode: int,
     ) -> List[EpisodeResult]:
-        """Return test episode download links."""
-        await asyncio.sleep(3)
+        """Return episode download links from Vadapav."""
+        try:
+            # Find the series folder
+            series_entries = await self.get_series_entries_by_name(series.title)
 
-        return [
-            EpisodeResult(
-                title=f"{series.title} S{season:02d}E{episode:02d}",
-                season=season,
-                episode=episode,
-                quality="1080p AMZN WEB-DL",
-                size_mb=2500.0,
-                download_url=f"https://test-provider.com/tv/{series.id}/s{season}e{episode}/amzn",
-                source_site=self.name,
-            ),
-            EpisodeResult(
-                title=f"{series.title} S{season:02d}E{episode:02d}",
-                season=season,
-                episode=episode,
-                quality="720p WEB-DL",
-                size_mb=800.0,
-                download_url=f"https://test-provider.com/tv/{series.id}/s{season}e{episode}/720p",
-                source_site=self.name,
-            ),
-        ]
+            if not series_entries:
+                logger.info(f"Series not found: {series.title}")
+                return []
+
+            results = []
+            for series_entry in series_entries:
+                # Get episode files for this season/episode
+                episode_files = await self.get_episode_files(
+                    series_entry.path, season, episode
+                )
+
+                for ep_file in episode_files:
+                    if ep_file.name.endswith(ALLOWED_EXTENSIONS):
+                        logger.info(f"Episode entry: {ep_file}")
+                        results.append(
+                            EpisodeResult(
+                                title=f"{series.title} S{season:02d}E{episode:02d}",
+                                season=season,
+                                episode=episode,
+                                quality=self.get_quality_from_name(ep_file.name),
+                                size_mb=ep_file.size / 1024 / 1024
+                                if ep_file.size
+                                else 0.0,
+                                download_url=ep_file.path,
+                                source_site=self.name,
+                            )
+                        )
+
+            return results
+        except Exception as e:
+            logger.warning(f"Error fetching episode from {self.name}", exc_info=e)
+            return []
