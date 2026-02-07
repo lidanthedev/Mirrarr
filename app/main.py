@@ -1,5 +1,3 @@
-from app.providers.rivestream_provider import RiveStreamProvider
-from app.providers.vadapav_provider import VadapavProvider
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,9 +8,9 @@ from fastapi.templating import Jinja2Templates
 from app.api.routes_ui import router as ui_router
 from app.api.routes_api import router as api_router
 from app.providers import register_provider
-from app.providers.dummy_provider import DummyProvider
-from app.providers.test_provider import TestProvider
 from app.providers.a111477_provider import A111477Provider
+from app.providers.rivestream_provider import RiveStreamProvider
+from app.providers.vadapav_provider import VadapavProvider
 from app.services.download_manager import download_manager_lifespan
 
 load_dotenv()
