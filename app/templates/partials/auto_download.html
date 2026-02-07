@@ -3,6 +3,6 @@
     // Log the download URL to console (simulated download)
     console.log('[DOWNLOAD QUEUED]', '{{ download_url }}');
 
-    // Show toast using global function
-    showToast('Download queued: {{ quality }}', 'success');
+    // Show toast using global function - prefer filename over quality
+    showToast('Download queued: {{ display_name or filename or quality }}', 'success');
 </script>

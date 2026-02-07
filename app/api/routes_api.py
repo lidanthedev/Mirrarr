@@ -1,10 +1,12 @@
 """API routes returning JSON for HTMX or external tools."""
 
-from typing import List
+from typing import Any, List
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from app.providers import ProviderRegistry
+from app.services.download_manager import manager
 from app.services.tmdb import search_tmdb, MediaType, TMDBSearchResult
 
 router = APIRouter()
@@ -39,3 +41,35 @@ async def list_providers():
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "service": "mirrarr"}
+
+
+# --- Download Management ---
+
+
+class DownloadRequest(BaseModel):
+    """Request body for queueing a download."""
+
+    url: str
+    opts: dict[str, Any] | None = None
+
+
+@router.post("/downloads")
+async def queue_download(request: DownloadRequest):
+    """Queue a new download."""
+    download_id = await manager.add_download(request.url, request.opts)
+    return {"id": download_id, "status": "queued"}
+
+
+@router.get("/downloads")
+async def list_downloads():
+    """List all downloads and their statuses."""
+    return {"downloads": manager.get_all_downloads()}
+
+
+@router.get("/downloads/{download_id}")
+async def get_download(download_id: str):
+    """Get a specific download status."""
+    status = manager.get_download(download_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Download not found")
+    return status

@@ -1,5 +1,3 @@
-"""Mirrarr - DDL PVR Application."""
-
 from app.providers.vadapav_provider import VadapavProvider
 from pathlib import Path
 
@@ -14,6 +12,7 @@ from app.providers import register_provider
 from app.providers.dummy_provider import DummyProvider
 from app.providers.test_provider import TestProvider
 from app.providers.a111477_provider import A111477Provider
+from app.services.download_manager import download_manager_lifespan
 
 load_dotenv()
 
@@ -22,11 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
 
-# Initialize FastAPI
+# Initialize FastAPI with download manager lifespan
 app = FastAPI(
     title="Mirrarr",
     description="A Sonarr-like PVR for Direct Download content",
     version="0.1.0",
+    lifespan=download_manager_lifespan,
 )
 
 # Mount static files

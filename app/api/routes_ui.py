@@ -18,6 +18,7 @@ from app.services.search import (
     select_best_result,
 )
 from app.providers import ProviderRegistry
+from app.services.download_manager import manager
 
 router = APIRouter()
 
@@ -279,13 +280,18 @@ async def download_queue(
     tmdb_id: int = 0,
     season: int = 1,
     episode: int = 1,
+    filename: str = "",
 ):
-    """Queue a download - shows toast and logs URL to console.
+    """Queue a download via yt_dlp download manager.
 
-    This is a simulated download - in production this would actually queue the download.
+    Shows toast notification and actually queues the download.
     """
-    # Log the download (this is where actual download logic would go)
-    print(f"[DOWNLOAD QUEUED] {quality} from {source}: {url}")
+    # Actually queue the download via the manager, with optional custom filename
+    download_id = await manager.add_download(url, custom_filename=filename or None)
+    print(f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}")
+
+    # Use filename for display, fallback to quality
+    display_name = filename if filename else quality
 
     return templates.TemplateResponse(
         "partials/auto_download.html",
@@ -294,5 +300,35 @@ async def download_queue(
             "download_url": url,
             "quality": quality,
             "source": source,
+            "download_id": download_id,
+            "filename": filename,
+            "display_name": display_name,
+        },
+    )
+
+
+@router.get("/downloads")
+async def downloads_page(request: Request):
+    """Render the downloads management page."""
+    downloads = manager.get_all_downloads()
+    return templates.TemplateResponse(
+        "downloads.html",
+        {
+            "request": request,
+            "downloads": downloads,
+            "page_title": "Downloads",
+        },
+    )
+
+
+@router.get("/downloads/list")
+async def downloads_list_partial(request: Request):
+    """Return the downloads list partial (for HTMX polling)."""
+    downloads = manager.get_all_downloads()
+    return templates.TemplateResponse(
+        "partials/download_list.html",
+        {
+            "request": request,
+            "downloads": downloads,
         },
     )
