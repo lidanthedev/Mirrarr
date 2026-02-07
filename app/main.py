@@ -1,5 +1,6 @@
 """Mirrarr - DDL PVR Application."""
 
+from app.providers.vadapav_provider import VadapavProvider
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -36,6 +37,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 # Register providers
 register_provider(DummyProvider())
 register_provider(TestProvider())
+register_provider(VadapavProvider())
 
 # Include routers
 app.include_router(ui_router)
