@@ -219,12 +219,26 @@ async def episode_auto(
 ):
     """Auto-download best quality for an episode.
 
-    Shows a toast and logs the URL to console (simulated download).
+    Finds the best quality result and queues it for download.
     """
     _, results = await get_provider_results_for_episode(tmdb_id, season, episode)
     best = select_best_result(results)
 
     if best:
+        # Actually queue the download with provider-specific yt_opts
+        filename = best.filename
+        provider_name = best.provider_name
+        provider = ProviderRegistry.get(provider_name)
+        yt_opts = provider.get_yt_opts()
+        download_id = await manager.add_download(
+            best.download_url, client_opts=yt_opts, custom_filename=filename or None
+        )
+        print(
+            f"[DOWNLOAD QUEUED] ID={download_id} {best.quality} from {best.source_site}: {best.download_url}"
+        )
+
+        display_name = filename if filename else best.quality
+
         return templates.TemplateResponse(
             "partials/auto_download.html",
             {
@@ -232,6 +246,9 @@ async def episode_auto(
                 "download_url": best.download_url,
                 "quality": best.quality,
                 "source": best.source_site,
+                "download_id": download_id,
+                "filename": filename,
+                "display_name": display_name,
             },
         )
 
@@ -248,12 +265,27 @@ async def movie_auto(
 ):
     """Auto-download best quality for a movie.
 
-    Shows a toast and logs the URL to console (simulated download).
+    Finds the best quality result and queues it for download.
     """
     _, results = await get_provider_results_for_movie(tmdb_id)
     best = select_best_result(results)
 
     if best:
+        # Actually queue the download with provider-specific yt_opts
+        filename = best.filename
+        provider_name = best.provider_name
+        provider = ProviderRegistry.get(provider_name)
+        download_id = await manager.add_download(
+            best.download_url,
+            custom_filename=filename or None,
+            client_opts=provider.get_yt_opts(),
+        )
+        print(
+            f"[DOWNLOAD QUEUED] ID={download_id} {best.quality} from {best.source_site}: {best.download_url}"
+        )
+
+        display_name = filename if filename else best.quality
+
         return templates.TemplateResponse(
             "partials/auto_download.html",
             {
@@ -261,6 +293,9 @@ async def movie_auto(
                 "download_url": best.download_url,
                 "quality": best.quality,
                 "source": best.source_site,
+                "download_id": download_id,
+                "filename": filename,
+                "display_name": display_name,
             },
         )
 
@@ -286,8 +321,11 @@ async def download_queue(
 
     Shows toast notification and actually queues the download.
     """
+    provider = ProviderRegistry.get(source)
     # Actually queue the download via the manager, with optional custom filename
-    download_id = await manager.add_download(url, custom_filename=filename or None)
+    download_id = await manager.add_download(
+        url, custom_filename=filename or None, client_opts=provider.get_yt_opts()
+    )
     print(f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}")
 
     # Use filename for display, fallback to quality

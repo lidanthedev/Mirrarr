@@ -1,35 +1,31 @@
 """Provider base classes and interfaces."""
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Any, List
 
 from pydantic import BaseModel
 
 from app.models.media import Movie, TVSeries
 
 
-class MovieResult(BaseModel):
-    """A movie download result from a provider."""
+class DownloadResult(BaseModel):
+    """A download result from a provider (movie or episode)."""
 
     title: str
     quality: str
     size_mb: float
     download_url: str
+    provider_name: str = ""
     source_site: str
     filename: str = ""  # Original filename from provider
+    # Episode-specific fields (optional for movies)
+    season: int | None = None
+    episode: int | None = None
 
 
-class EpisodeResult(BaseModel):
-    """An episode download result from a provider."""
-
-    title: str
-    season: int
-    episode: int
-    quality: str
-    size_mb: float
-    download_url: str
-    source_site: str
-    filename: str = ""  # Original filename from provider
+# Backward compatibility aliases
+MovieResult = DownloadResult
+EpisodeResult = DownloadResult
 
 
 class ProviderInterface(ABC):
@@ -76,3 +72,22 @@ class ProviderInterface(ABC):
             A list of EpisodeResult objects with available downloads.
         """
         pass
+
+    def get_yt_opts(self) -> dict[str, Any]:
+        """Return custom yt-dlp options for this provider.
+
+        Override this method to add custom headers, cookies, or other
+        yt-dlp options specific to this provider.
+
+        Example:
+            return {
+                "http_headers": {
+                    "Referer": "https://example.com",
+                    "User-Agent": "Custom UA",
+                }
+            }
+
+        Returns:
+            A dict of yt-dlp options to merge with defaults.
+        """
+        return {}

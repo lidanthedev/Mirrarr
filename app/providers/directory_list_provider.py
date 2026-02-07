@@ -43,7 +43,7 @@ VIDEO_EXTENSIONS = (
     "qt",
 )
 
-cache = TTLCache(maxsize=100, ttl=300)
+cache = TTLCache(maxsize=100, ttl=1800)
 
 
 class FileEntry(NamedTuple):
@@ -234,6 +234,7 @@ class DirectoryListProvider(ProviderInterface):
                             download_url=movie_entry.path,
                             source_site=self.name,
                             filename=movie_entry.name,
+                            provider_name=self.name,
                         )
                     )
             return results
@@ -353,6 +354,7 @@ class DirectoryListProvider(ProviderInterface):
                                 download_url=ep_file.path,
                                 source_site=self.name,
                                 filename=ep_file.name,
+                                provider_name=self.name,
                             )
                         )
 

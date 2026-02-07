@@ -1,5 +1,6 @@
 """A111477 provider for https://a.111477.xyz/."""
 
+from typing import Any
 from typing import List
 from urllib.parse import urljoin
 
@@ -68,3 +69,6 @@ class A111477Provider(DirectoryListProvider):
                 results.append(FileEntry(name=name, path=path, size=size))
 
         return results
+
+    def get_yt_opts(self) -> dict[str, Any]:
+        return {"concurrent_fragment_downloads": 10}

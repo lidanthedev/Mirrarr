@@ -91,8 +91,6 @@ class DownloadManager:
         )
 
         # Default yt_dlp options
-        # Note: We don't use aria2c external downloader because it doesn't
-        # send progress updates to the progress hooks
         self.default_opts: dict[str, Any] = {
             "outtmpl": "downloads/%(title)s.%(ext)s",
             "restrictfilenames": True,
@@ -276,6 +274,7 @@ class DownloadManager:
             client_opts: Optional yt_dlp options to override defaults
             custom_filename: Optional filename to rename the file to after download
         """
+        print(f"Download with options: {client_opts}")
         download_id = str(uuid.uuid4())
 
         new_status: DownloadStatus = {
@@ -312,6 +311,8 @@ class DownloadManager:
 
 # Global manager instance
 manager = DownloadManager(max_concurrent_downloads=2)
+
+300
 
 
 @asynccontextmanager

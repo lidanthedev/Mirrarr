@@ -60,9 +60,10 @@
                                 stroke-linecap="round" />
                         </svg>
                     </div>
-                    <div>
+                    <div class="flex-1 min-w-0 text-left">
                         <p class="font-bold text-lg">AUTO - Best Quality</p>
                         <p id="auto-btn-status" class="text-sm text-white/80">Click to auto-select best download</p>
+                        <p id="auto-btn-filename" class="text-xs text-white/60 break-words hidden"></p>
                     </div>
                 </div>
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,6 +181,12 @@
                             var best = findBestFromResults(collectedResults);
                             if (best) {
                                 updateStatus('Ready - Best: ' + best.quality);
+                                // Show filename below if available
+                                var filenameEl = document.getElementById('auto-btn-filename');
+                                if (filenameEl && best.filename) {
+                                    filenameEl.textContent = best.filename;
+                                    filenameEl.classList.remove('hidden');
+                                }
                             } else {
                                 updateStatus('No downloads available');
                             }
