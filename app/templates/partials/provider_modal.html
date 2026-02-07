@@ -42,39 +42,38 @@
             </button>
         </div>
 
-        <!-- AUTO Button - Always clickable, will use available results -->
+        <!-- AUTO Button - Click to auto-select best and queue download -->
         <div class="p-4 bg-slate-900/50 border-b border-slate-700">
-            <div id="auto-button-container">
-                <!-- Clickable immediately - will select best from whatever is available -->
-                <button hx-get="/auto-button/{{ media_type }}/{{ tmdb_id }}?season={{ season }}&episode={{ episode }}"
-                    hx-target="#auto-button-container" hx-swap="innerHTML"
-                    class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25 cursor-pointer">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-white/20 rounded-lg">
-                            <!-- Normal lightning icon -->
-                            <svg class="h-6 w-6 htmx-hide-on-request" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            <!-- Loading spinner (shown during request) -->
-                            <svg class="h-6 w-6 animate-spin htmx-show-on-request" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" stroke-width="2" stroke-dasharray="31.4 31.4"
-                                    stroke-linecap="round" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="font-bold text-lg">AUTO - Best Quality</p>
-                            <p class="text-sm text-white/80">Click to auto-select best download</p>
-                        </div>
+            <button {% if media_type=='movie' %} hx-get="/movie/auto/{{ tmdb_id }}"
+                hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
+                hx-get="/episode/auto/{{ tmdb_id }}/{{ season }}/{{ episode }}"
+                hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
+                hx-target="#toast-container" hx-swap="innerHTML"
+                class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25 cursor-pointer">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-white/20 rounded-lg">
+                        <!-- Normal lightning icon -->
+                        <svg class="h-6 w-6 htmx-hide-on-request" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <!-- Loading spinner (shown during request) -->
+                        <svg class="h-6 w-6 animate-spin htmx-show-on-request" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2" stroke-dasharray="31.4 31.4"
+                                stroke-linecap="round" />
+                        </svg>
                     </div>
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                </button>
-            </div>
+                    <div>
+                        <p class="font-bold text-lg">AUTO - Best Quality</p>
+                        <p class="text-sm text-white/80">Click to auto-select best download</p>
+                    </div>
+                </div>
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            </button>
         </div>
 
         <!-- Provider Results - Each loads independently -->
