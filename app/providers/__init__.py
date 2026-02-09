@@ -1,6 +1,6 @@
 """Provider registry for dynamic provider management."""
 
-from typing import Dict, List
+from typing import Dict, List, ClassVar
 
 from app.providers.base import ProviderInterface
 
@@ -8,7 +8,7 @@ from app.providers.base import ProviderInterface
 class ProviderRegistry:
     """Registry for managing DDL providers."""
 
-    _providers: Dict[str, ProviderInterface] = {}
+    _providers: ClassVar[Dict[str, ProviderInterface]] = {}
 
     @classmethod
     def register(cls, provider: ProviderInterface) -> None:

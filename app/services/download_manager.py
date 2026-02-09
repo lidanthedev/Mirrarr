@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import time
 import re
 import asyncio
 import uuid
@@ -65,6 +64,7 @@ class DownloadStatus(TypedDict):
     eta: NotRequired[str | None]
     total_bytes: NotRequired[str | None]
     error: NotRequired[str | None]
+    metadata: NotRequired[dict[str, Any] | None]
 
 
 class DownloadJob(TypedDict):
@@ -74,6 +74,8 @@ class DownloadJob(TypedDict):
     url: str
     opts: dict[str, Any]
     custom_filename: NotRequired[str | None]
+    attempt: NotRequired[int]
+    metadata: NotRequired[dict[str, Any] | None]
 
 
 # Global state: mapping download IDs to their status
@@ -128,25 +130,39 @@ class DownloadManager:
             url = job["url"]
             custom_opts = job["opts"]
             custom_filename = job.get("custom_filename")
+            attempt = job.get("attempt", 0)
 
-            print(f"[{worker_name}] Starting: {url}")
+            print(f"[{worker_name}] Starting: {url} (Attempt {attempt + 1})")
 
             if download_id in download_status:
                 download_status[download_id]["status"] = "downloading"
 
             # Run blocking yt_dlp in thread pool
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(
+            retry_delay = await loop.run_in_executor(
                 self.executor,
                 self._run_yt_dlp,
                 url,
                 download_id,
                 custom_opts,
                 custom_filename,
+                attempt,
             )
 
-            print(f"[{worker_name}] Finished: {url}")
+            if retry_delay:
+                # Re-queue the job after delay (non-blocking)
+                asyncio.create_task(self._requeue_job(job, retry_delay))
+            else:
+                # Success or fatal error
+                print(f"[{worker_name}] Finished: {url}")
+
             self.queue.task_done()
+
+    async def _requeue_job(self, job: DownloadJob, delay: float) -> None:
+        """Wait for delay then put job back in queue."""
+        await asyncio.sleep(delay)
+        job["attempt"] = job.get("attempt", 0) + 1
+        await self.queue.put(job)
 
     def _run_yt_dlp(
         self,
@@ -154,8 +170,9 @@ class DownloadManager:
         download_id: str,
         custom_opts: dict[str, Any],
         custom_filename: str | None = None,
-    ) -> None:
-        """Run yt_dlp download (blocking, run in executor)."""
+        attempt: int = 0,
+    ) -> float | None:
+        """Run yt_dlp download (blocking). Returns retry delay in seconds if needed, else None."""
 
         def progress_hook(d: dict[str, Any]) -> None:
             if download_id not in download_status:
@@ -209,74 +226,68 @@ class DownloadManager:
         retry_delays = [5, 10, 20, 40, 80]  # seconds
         max_retries = len(retry_delays)
 
-        for attempt in range(max_retries + 1):
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
 
-                if download_id in download_status:
-                    # Handle file renaming if custom filename was provided
-                    if custom_filename:
-                        downloaded_file = download_status[download_id].get(
-                            "_downloaded_file"
-                        )
-                        if downloaded_file:
-                            new_path = _rename_downloaded_file(
-                                downloaded_file, custom_filename
-                            )
-                            if new_path:
-                                download_status[download_id]["filename"] = new_path
-
-                    download_status[download_id]["status"] = "completed"
-                    download_status[download_id]["percent"] = "100%"
-                    download_status[download_id]["error"] = None
-                return  # Success, exit the retry loop
-
-            except Exception as e:
-                error_msg = _strip_ansi(str(e))
-                # Retry on rate limits OR timeout errors
-                is_rate_limit = "429" in error_msg or "Too Many Requests" in error_msg
-                is_timeout = (
-                    "timed out" in error_msg.lower()
-                    or "timeout" in error_msg.lower()
-                    or "Read timed out" in error_msg
-                )
-                should_retry = is_rate_limit or is_timeout
-
-                if should_retry and attempt < max_retries:
-                    # Retryable error, retry after delay
-                    remaining = max_retries - attempt
-                    retry_delay = retry_delays[attempt]
-                    reason = "Rate limited" if is_rate_limit else "Timed out"
-                    print(
-                        f"{reason} on {url}, retrying in {retry_delay}s "
-                        f"({remaining} retries left)"
+            if download_id in download_status:
+                # Handle file renaming if custom filename was provided
+                if custom_filename:
+                    downloaded_file = download_status[download_id].get(
+                        "_downloaded_file"
                     )
-                    if download_id in download_status:
-                        download_status[download_id]["status"] = "retrying"
-                        download_status[download_id]["error"] = (
-                            f"{reason}. Retrying in {retry_delay}s... "
-                            f"({remaining} left)"
+                    if downloaded_file:
+                        new_path = _rename_downloaded_file(
+                            downloaded_file, custom_filename
                         )
+                        if new_path:
+                            download_status[download_id]["filename"] = new_path
 
-                    time.sleep(retry_delay)
-                    # Reset status for next attempt
-                    if download_id in download_status:
-                        download_status[download_id]["status"] = "downloading"
-                        download_status[download_id]["error"] = None
-                else:
-                    # Non-retryable error or max retries exceeded
-                    print(f"Error downloading {url}: {e}")
-                    if download_id in download_status:
-                        download_status[download_id]["status"] = "error"
-                        download_status[download_id]["error"] = error_msg
-                    return
+                download_status[download_id]["status"] = "completed"
+                download_status[download_id]["percent"] = "100%"
+                download_status[download_id]["error"] = None
+            return None  # Success
+
+        except Exception as e:
+            error_msg = _strip_ansi(str(e))
+            # Retry on rate limits OR timeout errors
+            is_rate_limit = "429" in error_msg or "Too Many Requests" in error_msg
+            is_timeout = (
+                "timed out" in error_msg.lower()
+                or "timeout" in error_msg.lower()
+                or "Read timed out" in error_msg
+            )
+            should_retry = is_rate_limit or is_timeout
+
+            if should_retry and attempt < max_retries:
+                # Retryable error, return delay
+                remaining = max_retries - attempt
+                retry_delay = retry_delays[attempt]
+                reason = "Rate limited" if is_rate_limit else "Timed out"
+                print(
+                    f"{reason} on {url}, retrying in {retry_delay}s "
+                    f"({remaining} retries left)"
+                )
+                if download_id in download_status:
+                    download_status[download_id]["status"] = "retrying"
+                    download_status[download_id]["error"] = (
+                        f"{reason}. Retrying in {retry_delay}s... ({remaining} left)"
+                    )
+                return retry_delay
+            else:
+                # Non-retryable error or max retries exceeded
+                print(f"Error downloading {url}: {e}")
+                if download_id in download_status:
+                    download_status[download_id]["status"] = "error"
+                    download_status[download_id]["error"] = error_msg
+                return None
 
     async def add_download(
         self,
         url: str,
         client_opts: dict[str, Any] | None = None,
         custom_filename: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Queue a new download and return its ID.
 
@@ -284,6 +295,7 @@ class DownloadManager:
             url: The URL to download
             client_opts: Optional yt_dlp options to override defaults
             custom_filename: Optional filename to rename the file to after download
+            metadata: Optional metadata to store with the download
         """
         print(f"Download with options: {client_opts}")
         download_id = str(uuid.uuid4())
@@ -293,6 +305,7 @@ class DownloadManager:
             "url": url,
             "status": "queued",
             "percent": "0%",
+            "metadata": metadata,
         }
 
         # Store custom filename in status for display
@@ -306,6 +319,7 @@ class DownloadManager:
             "url": url,
             "opts": client_opts or {},
             "custom_filename": custom_filename,
+            "metadata": metadata,
         }
         await self.queue.put(job)
 
@@ -322,8 +336,6 @@ class DownloadManager:
 
 # Global manager instance
 manager = DownloadManager(max_concurrent_downloads=2)
-
-300
 
 
 @asynccontextmanager

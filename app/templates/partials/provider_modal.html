@@ -136,13 +136,22 @@
                     '&filename=' + encodeURIComponent(result.filename || '');
 
                 var displayName = result.filename || result.quality;
-                fetch(url).then(function () {
-                    showToast('Download queued: ' + displayName, 'success');
-                    // For episodes, refresh the series modal
-                    if (mediaType !== 'movie') {
-                        htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
-                    }
-                });
+                fetch(url)
+                    .then(function (response) {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response;
+                    })
+                    .then(function () {
+                        showToast('Download queued: ' + displayName, 'success');
+                        // For episodes, refresh the series modal
+                        if (mediaType !== 'movie') {
+                            htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
+                        }
+                    })
+                    .catch(function (error) {
+                        console.error('Download queue failed:', error);
+                        showToast('Failed to queue download', 'error');
+                    });
             }
 
             function showNoResultsToast() {
@@ -219,14 +228,21 @@
                     updateStatus('Waiting for providers...');
 
                     // Wait for all providers, then queue and close
+                    var startTime = Date.now();
                     var checkInterval = setInterval(function () {
-                        if (allLoaded) {
+                        // Stop if all loaded OR timeout (30s)
+                        if (allLoaded || (Date.now() - startTime > 30000)) {
                             clearInterval(checkInterval);
+
                             var best = findBestFromResults(collectedResults);
                             if (best) {
                                 queueDownloadAndShowToast(best);
                             } else {
-                                showNoResultsToast();
+                                if (!allLoaded) {
+                                    showToast('Timeout waiting for providers', 'error');
+                                } else {
+                                    showNoResultsToast();
+                                }
                             }
                             // Close modal after queuing
                             var modal = document.getElementById('provider-modal');

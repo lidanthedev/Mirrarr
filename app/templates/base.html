@@ -117,8 +117,19 @@
 
             var toast = document.createElement('div');
             toast.className = 'toast-enter p-4 ' + colors[type] + ' rounded-lg shadow-lg text-white flex items-center gap-3';
-            toast.innerHTML = '<svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                icons[type] + '</svg><span>' + message + '</span>';
+
+            var icon = document.createElement('svg');
+            icon.setAttribute('class', 'h-5 w-5 flex-shrink-0');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'currentColor');
+            icon.setAttribute('viewBox', '0 0 24 24');
+            icon.innerHTML = icons[type];
+
+            var msg = document.createElement('span');
+            msg.textContent = message;
+
+            toast.appendChild(icon);
+            toast.appendChild(msg);
 
             container.appendChild(toast);
 

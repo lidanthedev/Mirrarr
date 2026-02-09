@@ -28,6 +28,7 @@ override-dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "ipython>=9.10.0",
     "pytest>=9.0.2",
 ]

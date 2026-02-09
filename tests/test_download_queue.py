@@ -1,0 +1,74 @@
+from fastapi.testclient import TestClient
+from app.main import app
+from app.services.download_manager import manager
+from app.providers.base import ProviderInterface
+from app.providers import ProviderRegistry
+
+
+# Define a mock provider
+class MockProvider(ProviderInterface):
+    @property
+    def name(self) -> str:
+        return "TestProvider"
+
+    async def get_movie(self, movie):
+        return []
+
+    async def get_series_episode(self, series, season, episode):
+        return []
+
+    def get_yt_opts(self):
+        return {"test": "opts"}
+
+
+# Register it BEFORE creating the client effectively (although client is created at module level, app is shared)
+ProviderRegistry.register(MockProvider())
+
+client = TestClient(app)
+
+
+def test_download_queue_post():
+    """Test that the download queue endpoint works with POST and stores metadata."""
+
+    # Metadata params
+    params = {
+        "url": "https://example.com/video.mp4",
+        "quality": "1080p",
+        "source": "TestProvider",
+        "media_type": "movie",
+        "tmdb_id": 12345,
+        "season": 1,
+        "episode": 1,
+        "filename": "Test Movie (2023).mp4",
+    }
+
+    # Make POST request
+    response = client.post("/download/queue", params=params)
+
+    assert response.status_code == 200, (
+        f"Expected 200 OK, got {response.status_code}: {response.text}"
+    )
+
+    # Verify download was added to manager
+    downloads = manager.get_all_downloads()
+    assert len(downloads) > 0, "Download queue should not be empty"
+
+    # Find our download
+    # Since tests run in parallel or sequence, we should filter by ID or URL
+    # We use list comprehension to safely get the last matching download
+    matching_downloads = [d for d in downloads if d["url"] == params["url"]]
+    assert len(matching_downloads) > 0, "Should find the download we just queued"
+    latest = matching_downloads[-1]
+
+    # Verify metadata
+    metadata = latest.get("metadata")
+    assert metadata is not None
+    # Note: Query params are parsed as strings by FastAPI unless typed, but here they are passed as kwargs to client.post
+    # FastAPI does type coercion based on type hints in route function!
+    # So tmdb_id should be int, season int, etc.
+    assert metadata["tmdb_id"] == params["tmdb_id"]
+    assert metadata["media_type"] == params["media_type"]
+    assert metadata["season"] == params["season"]
+    assert metadata["episode"] == params["episode"]
+
+    print("Test passed: Download queued via POST with correct metadata.")

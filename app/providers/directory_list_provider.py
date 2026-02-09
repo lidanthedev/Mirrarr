@@ -15,32 +15,32 @@ logger.setLevel(logging.INFO)
 # Common video extensions supported by all directory providers
 VIDEO_EXTENSIONS = (
     # Common & Modern
-    "mp4",
-    "m4v",
-    "mkv",
-    "webm",
-    "mov",
-    "avi",
-    "wmv",
+    ".mp4",
+    ".m4v",
+    ".mkv",
+    ".webm",
+    ".mov",
+    ".avi",
+    ".wmv",
     # High Definition / Transport Streams
-    "mts",
-    "m2ts",
-    "ts",
-    "avchd",
+    ".mts",
+    ".m2ts",
+    ".ts",
+    ".avchd",
     # Legacy / Mobile
-    "flv",
-    "vob",
-    "ogv",
-    "3gp",
-    "3g2",
-    "mjp",
-    "m1v",
-    "m2v",
+    ".flv",
+    ".vob",
+    ".ogv",
+    ".3gp",
+    ".3g2",
+    ".mjp",
+    ".m1v",
+    ".m2v",
     # Professional / Flash / Other
-    "f4v",
-    "swf",
-    "asf",
-    "qt",
+    ".f4v",
+    ".swf",
+    ".asf",
+    ".qt",
 )
 
 cache = TTLCache(maxsize=100, ttl=1800)
@@ -294,7 +294,7 @@ class DirectoryListProvider(ProviderInterface):
                     break
 
             # Also check if episodes are directly in series folder
-            if entry.name.endswith((".mkv", ".mp4", ".avi")):
+            if entry.name.endswith(VIDEO_EXTENSIONS):
                 if self._matches_episode(entry.name, season, episode):
                     results.append(entry)
 

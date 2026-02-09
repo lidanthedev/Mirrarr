@@ -28,7 +28,7 @@ async def api_search(
     else:
         mt = MediaType.ALL
 
-    return search_tmdb(q, mt)
+    return await search_tmdb(q, mt)
 
 
 @router.get("/providers")

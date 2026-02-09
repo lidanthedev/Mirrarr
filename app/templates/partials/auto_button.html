@@ -1,7 +1,7 @@
 <!-- AUTO Button - Best Quality (also triggers toast) -->
 {% if best_result %}
 <button
-    hx-get="/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
+    hx-post="/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
     hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
     hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
     hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}

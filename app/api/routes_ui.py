@@ -69,7 +69,7 @@ async def search(
     else:
         mt = MediaType.ALL
 
-    results = search_tmdb(query, mt)
+    results = await search_tmdb(query, mt)
 
     return templates.TemplateResponse(
         "partials/search_results.html",
@@ -83,7 +83,7 @@ async def series_modal(
     tmdb_id: int,
 ):
     """Return the TV series modal with all seasons and episodes."""
-    series = get_series_details(tmdb_id)
+    series = await get_series_details(tmdb_id)
 
     return templates.TemplateResponse(
         "partials/series_modal.html",
@@ -114,13 +114,13 @@ async def provider_modal(
 
     # Get media info for the header (fast TMDB lookup only)
     if media_type == "movie":
-        media = get_movie_details(tmdb_id)
+        media = await get_movie_details(tmdb_id)
         if not title:
             title = media.title
         if not poster_url and media.poster_url:
             poster_url = media.poster_url
     else:
-        media = get_series_details(tmdb_id)
+        media = await get_series_details(tmdb_id)
         if not title:
             title = media.title
         if not poster_url and media.poster_url:
@@ -326,7 +326,7 @@ async def movie_auto(
     )
 
 
-@router.get("/download/queue")
+@router.post("/download/queue")
 async def download_queue(
     request: Request,
     url: str,
@@ -353,9 +353,23 @@ async def download_queue(
                 "type": "error",
             },
         )
+
+    # Collect metadata from request parameters
+    metadata = {
+        "media_type": media_type,
+        "tmdb_id": tmdb_id,
+        "season": season,
+        "episode": episode,
+        "quality": quality,
+        "source": source,
+    }
+
     # Actually queue the download via the manager, with optional custom filename
     download_id = await manager.add_download(
-        url, custom_filename=filename or None, client_opts=provider.get_yt_opts()
+        url,
+        custom_filename=filename or None,
+        client_opts=provider.get_yt_opts(),
+        metadata=metadata,
     )
     print(f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}")
 

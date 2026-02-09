@@ -30,6 +30,12 @@ RUN uv sync --frozen --no-dev
 # Place the virtual environment path in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Create a non-root user and switch to it
+RUN useradd -m -u 1000 mirarr && \
+    chown -R mirarr:mirarr /app
+
+USER mirarr
+
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

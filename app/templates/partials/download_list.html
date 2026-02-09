@@ -73,11 +73,17 @@
                 </div>
 
                 <!-- URL (secondary) -->
+                {% if download.url.startswith('http://') or download.url.startswith('https://') %}
                 <a href="{{ download.url }}" target="_blank" rel="noopener noreferrer"
                     class="mt-1 text-xs text-slate-500 break-all hover:text-primary-400 transition-colors block"
                     title="{{ download.url }}">
                     {{ download.url[:100] }}{% if download.url|length > 100 %}...{% endif %}
                 </a>
+                {% else %}
+                <span class="mt-1 text-xs text-slate-500 break-all block" title="{{ download.url }}">
+                    {{ download.url[:100] }}{% if download.url|length > 100 %}...{% endif %}
+                </span>
+                {% endif %}
 
                 <!-- Progress Bar -->
                 {% if download.status in ['downloading', 'processing', 'queued'] %}

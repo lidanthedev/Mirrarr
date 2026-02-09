@@ -1,5 +1,6 @@
 """TMDB service for searching and fetching movie/series details."""
 
+import asyncio
 from cachetools import cached
 from cachetools import TTLCache
 from typing import List, Optional
@@ -83,22 +84,32 @@ def _parse_series_search(series: dict) -> TMDBSearchResult:
     )
 
 
-def search_movies(query: str) -> List[TMDBSearchResult]:
-    """Search TMDB for movies."""
+def _search_movies_sync(query: str) -> List[TMDBSearchResult]:
+    """Search TMDB for movies (synchronous)."""
     search = tmdb.Search()
     search.movie(query=query)
     return [_parse_movie_search(m) for m in search.results[:12]]
 
 
-def search_series(query: str) -> List[TMDBSearchResult]:
-    """Search TMDB for TV series."""
+async def search_movies(query: str) -> List[TMDBSearchResult]:
+    """Search TMDB for movies (async)."""
+    return await asyncio.to_thread(_search_movies_sync, query)
+
+
+def _search_series_sync(query: str) -> List[TMDBSearchResult]:
+    """Search TMDB for TV series (synchronous)."""
     search = tmdb.Search()
     search.tv(query=query)
     return [_parse_series_search(s) for s in search.results[:12]]
 
 
-def search_all(query: str) -> List[TMDBSearchResult]:
-    """Search TMDB for both movies and TV series."""
+async def search_series(query: str) -> List[TMDBSearchResult]:
+    """Search TMDB for TV series (async)."""
+    return await asyncio.to_thread(_search_series_sync, query)
+
+
+def _search_all_sync(query: str) -> List[TMDBSearchResult]:
+    """Search TMDB for both movies and TV series (synchronous)."""
     search = tmdb.Search()
     search.multi(query=query)
 
@@ -114,21 +125,26 @@ def search_all(query: str) -> List[TMDBSearchResult]:
     return results
 
 
-def search_tmdb(
+async def search_all(query: str) -> List[TMDBSearchResult]:
+    """Search TMDB for both movies and TV series (async)."""
+    return await asyncio.to_thread(_search_all_sync, query)
+
+
+async def search_tmdb(
     query: str, media_type: MediaType = MediaType.ALL
 ) -> List[TMDBSearchResult]:
     """Search TMDB based on media type."""
     if media_type == MediaType.MOVIE:
-        return search_movies(query)
+        return await search_movies(query)
     elif media_type == MediaType.SERIES:
-        return search_series(query)
+        return await search_series(query)
     else:
-        return search_all(query)
+        return await search_all(query)
 
 
 @cached(cache)
-def get_movie_details(tmdb_id: int) -> Movie:
-    """Fetch full movie details from TMDB."""
+def _get_movie_details_sync(tmdb_id: int) -> Movie:
+    """Fetch full movie details from TMDB (synchronous, cached)."""
     movie_api = tmdb.Movies(tmdb_id)
     info = movie_api.info()
 
@@ -155,9 +171,34 @@ def get_movie_details(tmdb_id: int) -> Movie:
     )
 
 
+async def get_movie_details(tmdb_id: int) -> Movie:
+    """Fetch full movie details from TMDB (async)."""
+    return await asyncio.to_thread(_get_movie_details_sync, tmdb_id)
+
+
+def _get_season_episodes_sync(tmdb_id: int, season_number: int) -> List[Episode]:
+    """Fetch episodes for a specific season (synchronous)."""
+    season_api = tmdb.TV_Seasons(tmdb_id, season_number)
+    info = season_api.info()
+
+    episodes = []
+    for ep in info.get("episodes", []):
+        episodes.append(
+            Episode(
+                episode_number=ep["episode_number"],
+                name=ep.get("name", f"Episode {ep['episode_number']}"),
+                overview=ep.get("overview", ""),
+                air_date=ep.get("air_date"),
+                runtime=ep.get("runtime"),
+            )
+        )
+
+    return episodes
+
+
 @cached(cache)
-def get_series_details(tmdb_id: int) -> TVSeries:
-    """Fetch full TV series details from TMDB including seasons and episodes."""
+def _get_series_details_sync(tmdb_id: int) -> TVSeries:
+    """Fetch full TV series details from TMDB including seasons and episodes (synchronous, cached)."""
     tv_api = tmdb.TV(tmdb_id)
     info = tv_api.info()
 
@@ -170,7 +211,8 @@ def get_series_details(tmdb_id: int) -> TVSeries:
     for s in info.get("seasons", []):
         if s.get("season_number", 0) > 0:
             # Fetch episodes for this season
-            episodes = get_season_episodes(tmdb_id, s["season_number"])
+            # Note: calling the synchronous version here since we are inside a thread
+            episodes = _get_season_episodes_sync(tmdb_id, s["season_number"])
             seasons.append(
                 Season(
                     season_number=s["season_number"],
@@ -203,21 +245,11 @@ def get_series_details(tmdb_id: int) -> TVSeries:
     )
 
 
-def get_season_episodes(tmdb_id: int, season_number: int) -> List[Episode]:
-    """Fetch episodes for a specific season."""
-    season_api = tmdb.TV_Seasons(tmdb_id, season_number)
-    info = season_api.info()
+async def get_series_details(tmdb_id: int) -> TVSeries:
+    """Fetch full TV series details from TMDB including seasons and episodes (async)."""
+    return await asyncio.to_thread(_get_series_details_sync, tmdb_id)
 
-    episodes = []
-    for ep in info.get("episodes", []):
-        episodes.append(
-            Episode(
-                episode_number=ep["episode_number"],
-                name=ep.get("name", f"Episode {ep['episode_number']}"),
-                overview=ep.get("overview", ""),
-                air_date=ep.get("air_date"),
-                runtime=ep.get("runtime"),
-            )
-        )
 
-    return episodes
+async def get_season_episodes(tmdb_id: int, season_number: int) -> List[Episode]:
+    """Fetch episodes for a specific season (async)."""
+    return await asyncio.to_thread(_get_season_episodes_sync, tmdb_id, season_number)

@@ -25,7 +25,7 @@ async def get_provider_results_for_movie(
     """
     settings = get_settings()
     timeout = settings.provider_timeout
-    movie = get_movie_details(tmdb_id)
+    movie = await get_movie_details(tmdb_id)
     providers = ProviderRegistry.all()
 
     async def fetch_from_provider(provider):
@@ -65,7 +65,7 @@ async def get_provider_results_for_episode(
     """
     settings = get_settings()
     timeout = settings.provider_timeout
-    series = get_series_details(tmdb_id)
+    series = await get_series_details(tmdb_id)
     providers = ProviderRegistry.all()
 
     async def fetch_from_provider(provider):
@@ -106,7 +106,7 @@ async def get_single_provider_results_for_movie(
     """
     settings = get_settings()
     timeout = settings.provider_timeout
-    movie = get_movie_details(tmdb_id)
+    movie = await get_movie_details(tmdb_id)
     results: List[MovieResult] = []
 
     provider = ProviderRegistry.get(provider_name)
@@ -139,7 +139,7 @@ async def get_single_provider_results_for_episode(
     """
     settings = get_settings()
     timeout = settings.provider_timeout
-    series = get_series_details(tmdb_id)
+    series = await get_series_details(tmdb_id)
     results: List[EpisodeResult] = []
 
     provider = ProviderRegistry.get(provider_name)

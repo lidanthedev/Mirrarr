@@ -33,7 +33,6 @@ Mirarr/
 ## Setup Steps
 
 1. **Install dependencies** using uv:
-// turbo
 ```bash
 uv sync
 ```
@@ -51,7 +50,6 @@ TMDB_API_KEY=your_tmdb_api_key_here
 
 ## Running the Application
 
-// turbo
 4. **Start the FastAPI development server**:
 ```bash
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -60,8 +58,6 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 The application will be available at: http://localhost:8000
 
 ## Running Tests
-
-// turbo
 5. **Run the test suite**:
 ```bash
 uv run pytest
