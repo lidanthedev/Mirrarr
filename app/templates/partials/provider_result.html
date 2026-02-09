@@ -16,9 +16,9 @@
     <div class="mt-2 ml-7 space-y-1">
         {% for result in provider_results %}
         <button class="provider-result-item flex items-center gap-2 w-full p-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg
-        transition-colors group/item text-left" data-quality="{{ result.quality }}" data-size="{{ result.size }}"
-            data-download-url="{{ result.download_url }}" data-source="{{ result.source_site }}"
-            data-filename="{{ result.filename or '' }}" hx-get="/download/queue?url={{ result.download_url | urlencode }}&quality={{ result.quality | urlencode
+        transition-colors group/item text-left" data-quality="{{ result.quality }}"
+            data-size-mb="{{ '%.1f'|format(result.size / 1048576) }}" data-download-url="{{ result.download_url }}"
+            data-source="{{ result.source_site }}" data-filename="{{ result.filename or '' }}" hx-get="/download/queue?url={{ result.download_url | urlencode }}&quality={{ result.quality | urlencode
         }}&source={{ result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{
         season }}&episode={{ episode }}&filename={{ result.filename | urlencode if result.filename else '' }}"
             hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}

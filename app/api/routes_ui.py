@@ -1,5 +1,6 @@
 """UI routes returning HTML via Jinja2 templates."""
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Request, Form
@@ -229,6 +230,16 @@ async def episode_auto(
         filename = best.filename
         provider_name = best.provider_name
         provider = ProviderRegistry.get(provider_name)
+        if provider is None:
+            logging.warning(f"Provider '{provider_name}' not found in registry")
+            return templates.TemplateResponse(
+                "partials/toast.html",
+                {
+                    "request": request,
+                    "message": f"Provider '{provider_name}' not found",
+                    "type": "error",
+                },
+            )
         yt_opts = provider.get_yt_opts()
         download_id = await manager.add_download(
             best.download_url, client_opts=yt_opts, custom_filename=filename or None
@@ -275,6 +286,16 @@ async def movie_auto(
         filename = best.filename
         provider_name = best.provider_name
         provider = ProviderRegistry.get(provider_name)
+        if provider is None:
+            logging.warning(f"Provider '{provider_name}' not found in registry")
+            return templates.TemplateResponse(
+                "partials/toast.html",
+                {
+                    "request": request,
+                    "message": f"Provider '{provider_name}' not found",
+                    "type": "error",
+                },
+            )
         download_id = await manager.add_download(
             best.download_url,
             custom_filename=filename or None,
@@ -322,6 +343,16 @@ async def download_queue(
     Shows toast notification and actually queues the download.
     """
     provider = ProviderRegistry.get(source)
+    if provider is None:
+        logging.warning(f"Provider '{source}' not found in registry")
+        return templates.TemplateResponse(
+            "partials/toast.html",
+            {
+                "request": request,
+                "message": f"Provider '{source}' not found",
+                "type": "error",
+            },
+        )
     # Actually queue the download via the manager, with optional custom filename
     download_id = await manager.add_download(
         url, custom_filename=filename or None, client_opts=provider.get_yt_opts()

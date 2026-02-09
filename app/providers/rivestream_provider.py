@@ -1,5 +1,6 @@
 """Dummy provider for testing the UI flow."""
 
+import logging
 from cachetools import cached
 import math
 import base64
@@ -12,6 +13,8 @@ from typing import List
 
 from app.providers.base import ProviderInterface, MovieResult, EpisodeResult
 from app.models.media import Movie, TVSeries
+
+logger = logging.getLogger(__name__)
 
 cache = TTLCache(maxsize=100, ttl=1800)
 
@@ -381,16 +384,49 @@ class RiveStreamProvider(ProviderInterface):
         return "RiveStreamProvider"
 
     async def get_services(self) -> List[str]:
-        """Return list of services."""
+        """Return list of services.
+
+        Fetches available video provider services from the Rivestream API.
+        Returns cached results if available.  On any network, JSON, or
+        schema error the failure is logged and an empty list is returned
+        so that callers can degrade gracefully.
+        """
         if "services" in cache:
             return cache["services"]
 
-        response: Response = await niquests.aget(
-            "https://rivestream.org/api/backendfetch?requestID=VideoProviderServices&secretKey=rive&proxyMode=noProxy"
-        )
-        result = response.json()["data"]
-        cache["services"] = result
-        return result
+        try:
+            response: Response = await niquests.aget(
+                "https://rivestream.org/api/backendfetch",
+                params={
+                    "requestID": "VideoProviderServices",
+                    "secretKey": "rive",
+                    "proxyMode": "noProxy",
+                },
+                timeout=10,
+            )
+            data = response.json()
+            result = data["data"]
+
+            if not isinstance(result, list):
+                logger.warning(
+                    "get_services: expected 'data' to be a list, got %s",
+                    type(result).__name__,
+                )
+                return []
+
+            cache["services"] = result
+            return result
+        except (KeyError, TypeError) as exc:
+            logger.warning("get_services: unexpected response structure – %s", exc)
+        except niquests.exceptions.RequestException as exc:
+            logger.warning("get_services: network error – %s", exc)
+        except (ValueError, UnicodeDecodeError) as exc:
+            # ValueError covers json.JSONDecodeError (its subclass)
+            logger.warning("get_services: failed to decode JSON – %s", exc)
+        except Exception as exc:
+            logger.warning("get_services: unexpected error – %s", exc)
+
+        return []
 
     async def get_movies_with_service(
         self, movie: Movie, service: str

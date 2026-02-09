@@ -89,6 +89,7 @@ class DownloadManager:
         self.executor: ThreadPoolExecutor = ThreadPoolExecutor(
             max_workers=max_concurrent_downloads
         )
+        self._worker_tasks: list[asyncio.Task[None]] = []
 
         # Default yt_dlp options
         self.default_opts: dict[str, Any] = {
@@ -106,7 +107,17 @@ class DownloadManager:
         """Start background workers to process the queue."""
         print(f"🚀 Starting {self.max_workers} download workers...")
         for i in range(self.max_workers):
-            asyncio.create_task(self._worker(f"Worker-{i + 1}"))
+            task = asyncio.create_task(self._worker(f"Worker-{i + 1}"))
+            self._worker_tasks.append(task)
+
+    async def shutdown(self) -> None:
+        """Cancel all worker tasks and shut down the executor."""
+        for task in self._worker_tasks:
+            task.cancel()
+        # Wait for all tasks to finish cancellation
+        await asyncio.gather(*self._worker_tasks, return_exceptions=True)
+        self._worker_tasks.clear()
+        self.executor.shutdown(wait=False)
 
     async def _worker(self, worker_name: str) -> None:
         """Continuously pull tasks from the queue and process them."""
@@ -320,5 +331,4 @@ async def download_manager_lifespan(app):
     """FastAPI lifespan context manager to start download workers."""
     await manager.start_workers()
     yield
-    # Cleanup (if needed)
-    manager.executor.shutdown(wait=False)
+    await manager.shutdown()

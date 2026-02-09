@@ -1,4 +1,4 @@
 <!-- Toast Notification - Uses global showToast -->
 <script>
-    showToast('{{ message }}', '{{ type or "info" }}');
+    showToast({{ message | tojson }}, {{ (type or "info") | tojson }});
 </script>
