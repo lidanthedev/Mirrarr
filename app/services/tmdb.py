@@ -1,6 +1,7 @@
 """TMDB service for searching and fetching movie/series details."""
 
-from functools import cache
+from cachetools import cached
+from cachetools import TTLCache
 from typing import List, Optional
 from enum import Enum
 
@@ -9,6 +10,8 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.models.media import Movie, TVSeries, Season, Episode
+
+cache = TTLCache(maxsize=100, ttl=1800)
 
 # Initialize TMDB
 settings = get_settings()
@@ -123,7 +126,7 @@ def search_tmdb(
         return search_all(query)
 
 
-@cache
+@cached(cache)
 def get_movie_details(tmdb_id: int) -> Movie:
     """Fetch full movie details from TMDB."""
     movie_api = tmdb.Movies(tmdb_id)
@@ -152,7 +155,7 @@ def get_movie_details(tmdb_id: int) -> Movie:
     )
 
 
-@cache
+@cached(cache)
 def get_series_details(tmdb_id: int) -> TVSeries:
     """Fetch full TV series details from TMDB including seasons and episodes."""
     tv_api = tmdb.TV(tmdb_id)
