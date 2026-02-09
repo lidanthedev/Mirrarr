@@ -16,6 +16,9 @@ from app.models.media import Movie, TVSeries
 
 logger = logging.getLogger(__name__)
 
+
+RIVESTREAM_TIMEOUT = 20
+
 cache = TTLCache(maxsize=100, ttl=1800)
 
 
@@ -115,7 +118,7 @@ class RiveSolver:
                 try:
                     numeric_val = float(tmdb_id)
                     is_numeric = True
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     is_numeric = False
 
             if not is_numeric:
@@ -402,8 +405,9 @@ class RiveStreamProvider(ProviderInterface):
                     "secretKey": "rive",
                     "proxyMode": "noProxy",
                 },
-                timeout=10,
+                timeout=RIVESTREAM_TIMEOUT,
             )
+            response.raise_for_status()
             data = response.json()
             result = data["data"]
 
@@ -443,26 +447,52 @@ class RiveStreamProvider(ProviderInterface):
             "secretKey": self.rive_solver.solve(movie.id),
             "proxyMode": "noProxy",
         }
-        response: Response = await niquests.aget(
-            "https://rivestream.org/api/backendfetch", params=params
-        )
-        data = response.json()["data"]
-        if data is None or "sources" not in data:
+
+        try:
+            response: Response = await niquests.aget(
+                "https://rivestream.org/api/backendfetch",
+                params=params,
+                timeout=RIVESTREAM_TIMEOUT,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (niquests.exceptions.RequestException, ValueError) as exc:
+            logger.warning("get_movies_with_service error for %s: %s", service, exc)
             return []
+
+        if "data" not in payload:
+            return []
+
+        data = payload["data"]
+        if (
+            data is None
+            or "sources" not in data
+            or not isinstance(data["sources"], list)
+        ):
+            return []
+
         sources = data["sources"]
         movies = []
         for source in sources:
+            url = source.get("url")
+            quality = source.get("quality")
+            fmt = source.get("format")
+
+            if url is None or quality is None or fmt is None:
+                continue
+
             movies.append(
                 MovieResult(
                     provider_name=self.name,
                     title=movie.title,
-                    download_url=source["url"],
-                    quality=f"{source['quality']}p-{source['format']}",
+                    download_url=url,
+                    quality=f"{quality}p-{fmt}",
                     size=source.get("size", 0),
                     source_site=self.name,
-                    filename=f"{movie.title} - {source['quality']}p - {service}.{source['format']}",
+                    filename=f"{movie.title} - {quality}p - {service}.{fmt}",
                 )
             )
+
         cache[cache_key] = movies
         return movies
 
@@ -471,13 +501,18 @@ class RiveStreamProvider(ProviderInterface):
         services = await self.get_services()
 
         tasks = [self.get_movies_with_service(movie, service) for service in services]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
         movies = []
         for result in results:
-            if result is None:
+            if isinstance(result, Exception):
+                logger.warning(
+                    "get_movie_from_all_services: error fetching from service – %s",
+                    result,
+                )
                 continue
-            movies.extend(result)
+            if result:
+                movies.extend(result)
         return movies
 
     async def get_movie(self, movie: Movie) -> List[MovieResult]:
@@ -503,12 +538,17 @@ class RiveStreamProvider(ProviderInterface):
             "proxyMode": "noProxy",
         }
         response: Response = await niquests.aget(
-            "https://rivestream.org/api/backendfetch", params=params
+            "https://rivestream.org/api/backendfetch",
+            params=params,
+            timeout=RIVESTREAM_TIMEOUT,
         )
+        response.raise_for_status()
         try:
             data = response.json()["data"]
         except Exception:
-            print(f"Error decoding JSON from {service}: {response.text}")
+            logger.exception(
+                "Error decoding JSON from %s: %s", service, response.text, exc_info=True
+            )
             return []
         if data is None or "sources" not in data:
             return []
@@ -541,13 +581,18 @@ class RiveStreamProvider(ProviderInterface):
             self.get_series_episode_with_service(series, season, episode, service)
             for service in services
         ]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
         episodes = []
         for result in results:
-            if result is None:
+            if isinstance(result, Exception):
+                logger.warning(
+                    "get_series_episode_from_all_services: error fetching from service – %s",
+                    result,
+                )
                 continue
-            episodes.extend(result)
+            if result:
+                episodes.extend(result)
         return episodes
 
     async def get_series_episode(

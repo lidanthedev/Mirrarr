@@ -11,8 +11,22 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.models.media import Movie, TVSeries, Season, Episode
+import logging
+import requests
 
-cache = TTLCache(maxsize=100, ttl=1800)
+logger = logging.getLogger(__name__)
+
+
+class TMDBError(Exception):
+    """Domain exception for TMDB failures."""
+
+    def __init__(self, message: str, original_exception: Exception = None):
+        super().__init__(message)
+        self.original_exception = original_exception
+
+
+movie_cache = TTLCache(maxsize=100, ttl=1800)
+series_cache = TTLCache(maxsize=100, ttl=1800)
 
 # Initialize TMDB
 settings = get_settings()
@@ -87,8 +101,15 @@ def _parse_series_search(series: dict) -> TMDBSearchResult:
 def _search_movies_sync(query: str) -> List[TMDBSearchResult]:
     """Search TMDB for movies (synchronous)."""
     search = tmdb.Search()
-    search.movie(query=query)
-    return [_parse_movie_search(m) for m in search.results[:12]]
+    try:
+        search.movie(query=query)
+        return [_parse_movie_search(m) for m in search.results[:12]]
+    except (requests.exceptions.RequestException, tmdb.APIError) as exc:
+        logger.error("Error searching movies for '%s': %s", query, exc)
+        return []
+    except Exception as exc:
+        logger.exception("Unexpected error searching movies for '%s': %s", query, exc)
+        return []
 
 
 async def search_movies(query: str) -> List[TMDBSearchResult]:
@@ -99,8 +120,15 @@ async def search_movies(query: str) -> List[TMDBSearchResult]:
 def _search_series_sync(query: str) -> List[TMDBSearchResult]:
     """Search TMDB for TV series (synchronous)."""
     search = tmdb.Search()
-    search.tv(query=query)
-    return [_parse_series_search(s) for s in search.results[:12]]
+    try:
+        search.tv(query=query)
+        return [_parse_series_search(s) for s in search.results[:12]]
+    except (requests.exceptions.RequestException, tmdb.APIError) as exc:
+        logger.error("Error searching series for '%s': %s", query, exc)
+        return []
+    except Exception as exc:
+        logger.exception("Unexpected error searching series for '%s': %s", query, exc)
+        return []
 
 
 async def search_series(query: str) -> List[TMDBSearchResult]:
@@ -111,18 +139,23 @@ async def search_series(query: str) -> List[TMDBSearchResult]:
 def _search_all_sync(query: str) -> List[TMDBSearchResult]:
     """Search TMDB for both movies and TV series (synchronous)."""
     search = tmdb.Search()
-    search.multi(query=query)
-
-    results = []
-    for item in search.results[:12]:
-        media_type = item.get("media_type")
-        if media_type == "movie":
-            results.append(_parse_movie_search(item))
-        elif media_type == "tv":
-            results.append(_parse_series_search(item))
-        # Skip "person" results
-
-    return results
+    try:
+        search.multi(query=query)
+        results = []
+        for item in search.results[:12]:
+            media_type = item.get("media_type")
+            if media_type == "movie":
+                results.append(_parse_movie_search(item))
+            elif media_type == "tv":
+                results.append(_parse_series_search(item))
+            # Skip "person" results
+        return results
+    except (requests.exceptions.RequestException, tmdb.APIError) as exc:
+        logger.error("Error searching all for '%s': %s", query, exc)
+        return []
+    except Exception as exc:
+        logger.exception("Unexpected error searching all for '%s': %s", query, exc)
+        return []
 
 
 async def search_all(query: str) -> List[TMDBSearchResult]:
@@ -142,11 +175,15 @@ async def search_tmdb(
         return await search_all(query)
 
 
-@cached(cache)
+@cached(movie_cache)
 def _get_movie_details_sync(tmdb_id: int) -> Movie:
     """Fetch full movie details from TMDB (synchronous, cached)."""
     movie_api = tmdb.Movies(tmdb_id)
-    info = movie_api.info()
+    try:
+        info = movie_api.info()
+    except Exception as exc:
+        logger.error("Failed to fetch movie details for ID %s: %s", tmdb_id, exc)
+        raise TMDBError(f"Failed to fetch movie details for ID {tmdb_id}", exc)
 
     poster_path = info.get("poster_path")
     backdrop_path = info.get("backdrop_path")
@@ -179,7 +216,18 @@ async def get_movie_details(tmdb_id: int) -> Movie:
 def _get_season_episodes_sync(tmdb_id: int, season_number: int) -> List[Episode]:
     """Fetch episodes for a specific season (synchronous)."""
     season_api = tmdb.TV_Seasons(tmdb_id, season_number)
-    info = season_api.info()
+    try:
+        info = season_api.info()
+    except Exception as exc:
+        logger.error(
+            "Failed to fetch season episodes for ID %s S%s: %s",
+            tmdb_id,
+            season_number,
+            exc,
+        )
+        raise TMDBError(
+            f"Failed to fetch season episodes for ID {tmdb_id} S{season_number}", exc
+        )
 
     episodes = []
     for ep in info.get("episodes", []):
@@ -196,11 +244,15 @@ def _get_season_episodes_sync(tmdb_id: int, season_number: int) -> List[Episode]
     return episodes
 
 
-@cached(cache)
+@cached(series_cache)
 def _get_series_details_sync(tmdb_id: int) -> TVSeries:
     """Fetch full TV series details from TMDB including seasons and episodes (synchronous, cached)."""
     tv_api = tmdb.TV(tmdb_id)
-    info = tv_api.info()
+    try:
+        info = tv_api.info()
+    except Exception as exc:
+        logger.error("Failed to fetch series details for ID %s: %s", tmdb_id, exc)
+        raise TMDBError(f"Failed to fetch series details for ID {tmdb_id}", exc)
 
     poster_path = info.get("poster_path")
     backdrop_path = info.get("backdrop_path")
