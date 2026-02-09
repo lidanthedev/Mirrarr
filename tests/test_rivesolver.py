@@ -1,10 +1,4 @@
 import pytest
-import sys
-import os
-
-# Ensure we can import from the project root
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from app.providers.rivestream_provider import RiveSolver
 
 
