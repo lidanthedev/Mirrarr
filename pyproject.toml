@@ -29,4 +29,5 @@ override-dependencies = [
 [dependency-groups]
 dev = [
     "ipython>=9.10.0",
+    "pytest>=9.0.2",
 ]
