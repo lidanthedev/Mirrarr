@@ -95,3 +95,54 @@ def test_download_queue_post(client):
     assert metadata["episode"] == params["episode"]
 
     print("Test passed: Download queued via POST with correct metadata.")
+
+
+def test_download_queue_url_validation(client):
+    """Test that the download queue endpoint validates URLs correctly."""
+
+    valid_urls = [
+        "https://example.com/video.mp4",
+        "http://example.com/video.mp4",
+        "https://www.google.com/search?q=test",
+        "http://localhost:8080/file.mkv",
+        "https://subdomain.example.co.uk/path/to/resource",
+    ]
+
+    invalid_url = "not-a-valid-url"
+
+    # Test valid URLs
+    for url in valid_urls:
+        params = {
+            "url": url,
+            "quality": "1080p",
+            "source": "TestProvider",
+            "media_type": "movie",
+            "tmdb_id": 12345,
+            "season": 1,
+            "episode": 1,
+            "filename": "Test Movie.mp4",
+        }
+        response = client.post("/download/queue", json=params)
+        assert response.status_code == 200, (
+            f"Expected valid URL '{url}' to be accepted, got {response.status_code}"
+        )
+
+    # Test invalid URL
+    params = {
+        "url": invalid_url,
+        "quality": "1080p",
+        "source": "TestProvider",
+        "media_type": "movie",
+        "tmdb_id": 12345,
+        "season": 1,
+        "episode": 1,
+        "filename": "Test Movie.mp4",
+    }
+    response = client.post("/download/queue", json=params)
+    assert response.status_code == 422, (
+        f"Expected invalid URL '{invalid_url}' to be rejected with 422, got {response.status_code}"
+    )
+
+    print(
+        "Test passed: URL validation correctly accepted 5 valid URLs and rejected 1 invalid URL."
+    )

@@ -44,6 +44,10 @@ def _rename_downloaded_file(downloaded_file: str, custom_filename: str) -> str |
 
     # Get directory and extension from downloaded file
     download_dir = os.path.dirname(downloaded_file)
+    _, ext = os.path.splitext(downloaded_file)
+    # check if custom filename has extension if not add it
+    if not custom_filename.endswith(ext):
+        custom_filename = custom_filename + ext
 
     # Create new filename with proper extension
     new_path = os.path.join(download_dir, f"{custom_filename}")
