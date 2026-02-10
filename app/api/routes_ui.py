@@ -8,7 +8,8 @@ from pathlib import Path
 import asyncio
 from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
 from app.services.tmdb import (
     search_tmdb,
@@ -407,22 +408,22 @@ async def download_queue(
         client_opts=provider.get_yt_opts(),
         metadata=metadata,
     )
-    logger.info(f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}")
+    msg = f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}"
+    logger.info(msg)
 
-    # Use filename for display, fallback to quality
     display_name = filename if filename else quality
 
-    return templates.TemplateResponse(
-        request=request,
-        name="partials/auto_download.html",
-        context={
-            "download_url": url,
-            "quality": quality,
-            "source": source,
+    return JSONResponse(
+        content={
+            "status": "success",
+            "message": f"Download queued: {display_name}",
             "download_id": download_id,
             "filename": filename,
             "display_name": display_name,
-        },
+            "download_url": url,
+            "quality": quality,
+            "source": source,
+        }
     )
 
 

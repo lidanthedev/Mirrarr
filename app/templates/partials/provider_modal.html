@@ -153,29 +153,13 @@
                         filename: result.filename || ''
                     };
 
-                    var displayName = result.filename || result.quality;
-                    fetch('/download/queue', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    })
-                        .then(function (response) {
-                            if (!response.ok) throw new Error('Network response was not ok');
-                            return response;
-                        })
-                        .then(function () {
-                            showToast('Download queued: ' + displayName, 'success');
-                            // For episodes, refresh the series modal
-                            if (mediaType !== 'movie') {
-                                htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
-                            }
-                        })
-                        .catch(function (error) {
-                            console.error('Download queue failed:', error);
-                            showToast('Failed to queue download', 'error');
-                        });
+                    // Use global queueDownload function from base.html
+                    if (window.queueDownload) {
+                        queueDownload(payload);
+                    } else {
+                        console.error('queueDownload function not found');
+                        showToast('Internal error: queueDownload not found', 'error');
+                    }
                 }
 
                 function showNoResultsToast() {

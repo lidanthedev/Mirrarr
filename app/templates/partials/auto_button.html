@@ -38,35 +38,7 @@
 <!-- Also show toast immediately with the result -->
 <script>
     // Show a toast notification about what was selected
-    var toastContainer = document.getElementById('toast-container');
-    if (toastContainer) {
-        var toast = document.createElement('div');
-        toast.className = 'p-4 bg-blue-600 rounded-lg shadow-lg text-white flex items-center gap-3';
-
-        // Icon
-        var icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        icon.setAttribute("class", "h-5 w-5 flex-shrink-0");
-        icon.setAttribute("fill", "none");
-        icon.setAttribute("stroke", "currentColor");
-        icon.setAttribute("viewBox", "0 0 24 24");
-        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("stroke-linecap", "round");
-        path.setAttribute("stroke-linejoin", "round");
-        path.setAttribute("stroke-width", "2");
-        path.setAttribute("d", "M13 10V3L4 14h7v7l9-11h-7z");
-        icon.appendChild(path);
-
-        // Message
-        var msgSpan = document.createElement('span');
-        msgSpan.textContent = 'Selected: {{ best_result.quality }} from {{ best_result.source_site }}';
-
-        toast.appendChild(icon);
-        toast.appendChild(msgSpan);
-
-        toastContainer.innerHTML = '';
-        toastContainer.appendChild(toast);
-        setTimeout(function () { toast.remove(); }, 3000);
-    }
+    showToast({{ ('Selected: ' ~best_result.quality ~ ' from ' ~best_result.source_site) | tojson }}, 'success');
 </script>
 {% else %}
 <div class="flex items-center justify-center w-full p-4 bg-slate-700/50 rounded-xl text-slate-400">

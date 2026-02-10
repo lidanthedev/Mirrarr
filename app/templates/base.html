@@ -148,25 +148,50 @@
             })
                 .then(res => res.text().then(text => ({ ok: res.ok, status: res.status, text })))
                 .then(res => {
+                    // Try parsing as JSON first
+                    let json;
+                    try {
+                        json = JSON.parse(res.text);
+                    } catch (e) {
+                        // Not JSON, fall back to HTML
+                    }
+
                     if (!res.ok) {
-                        try {
-                            const json = JSON.parse(res.text);
-                            console.error("Error:", json);
-                            showToast('Error: ' + (json.detail && json.detail[0] ? json.detail[0].msg : 'Unknown'), 'error');
-                        } catch (e) { showToast('Request failed', 'error'); }
+                        console.error("Error:", json || res.text);
+                        const msg = json && (json.detail && json.detail[0] ? json.detail[0].msg : (json.message || 'Unknown error'));
+                        showToast('Error: ' + (msg || 'Request failed'), 'error');
                         return;
                     }
-                    // Success - show toast from HTML partial
-                    const container = document.getElementById('toast-container');
-                    if (container && res.text) {
-                        const div = document.createElement('div');
-                        div.innerHTML = res.text;
-                        const toast = div.firstElementChild;
-                        if (toast) {
-                            container.appendChild(toast);
-                            setTimeout(() => toast.remove(), 3000);
+
+                    // Success - check if JSON or HTML
+                    if (json) {
+                        // JSON response (new style)
+                        if (json.message) {
+                            showToast(json.message, 'success');
+                        }
+                    } else if (res.text) {
+                        // HTML response (legacy style - scripts won't execute via innerHTML, but visual elements will)
+                        const container = document.getElementById('toast-container');
+                        if (container) {
+                            const div = document.createElement('div');
+                            div.innerHTML = res.text;
+                            // If it's a script tag (e.g. from auto_download.html), this won't run.
+                            // But visual toasts will work.
+                            const toast = div.firstElementChild;
+                            if (toast && toast.tagName !== 'SCRIPT') {
+                                container.appendChild(toast);
+                                setTimeout(() => toast.remove(), 3000);
+                            } else if (toast && toast.tagName === 'SCRIPT') {
+                                // Execute script if returned (dangerous but needed for legacy)
+                                // Better to move to JSON everywhere
+                                const script = document.createElement('script');
+                                script.textContent = toast.textContent;
+                                document.body.appendChild(script);
+                                setTimeout(() => script.remove(), 100);
+                            }
                         }
                     }
+
                     // Close provider modal
                     const modal = document.getElementById('provider-modal');
                     if (modal) modal.remove();
