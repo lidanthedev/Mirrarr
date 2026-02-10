@@ -316,7 +316,7 @@ class DownloadManager:
             custom_filename: Optional filename to rename the file to after download
             metadata: Optional metadata to store with the download
         """
-        print(f"Download with options: {client_opts}")
+        # Sanitize client_opts for logging
         download_id = str(uuid.uuid4())
 
         new_status: DownloadStatus = {

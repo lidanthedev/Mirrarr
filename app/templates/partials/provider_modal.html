@@ -1,8 +1,10 @@
 <!-- Provider Selection Modal - Incremental Loading -->
-<div id="provider-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+<div id="provider-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    data-media-type="{{ media_type }}" data-tmdb-id="{{ tmdb_id }}" data-season="{{ season }}"
+    data-episode="{{ episode }}" data-provider-count="{{ provider_names | length }}">
+
     <!-- Backdrop - clicking closes modal -->
-    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onclick="document.getElementById('provider-modal').remove()"></div>
+    <div id="modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-pointer"></div>
 
     <!-- Modal Content -->
     <div
@@ -34,8 +36,7 @@
                 </svg>
             </button>
             {% endif %}
-            <button onclick="document.getElementById('provider-modal').remove()"
-                class="text-slate-400 hover:text-white transition-colors" title="Close">
+            <button id="modal-close-btn" class="text-slate-400 hover:text-white transition-colors" title="Close">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -75,191 +76,206 @@
 
         <script>
             (function () {
-                var totalProviders = {{ provider_names | length
-            }};
-            var loadedProviders = 0;
-            var mediaType = '{{ media_type }}';
-            var tmdbId = '{{ tmdb_id }}';
-            var season = '{{ season }}';
-            var episode = '{{ episode }}';
-            var allLoaded = false;
-            var autoClicked = false;
-            var collectedResults = [];
+                var modal = document.getElementById('provider-modal');
+                if (!modal) return;
 
-            function getQualityScore(quality) {
-                var q = quality.toUpperCase();
-                if (q.includes('4K') || q.includes('2160')) return 4;
-                if (q.includes('1080')) return 3;
-                if (q.includes('720')) return 2;
-                if (q.includes('480')) return 1;
-                return 0;
-            }
+                // Read data from dataset
+                var totalProviders = parseInt(modal.dataset.providerCount || '0');
+                var mediaType = modal.dataset.mediaType;
+                var tmdbId = modal.dataset.tmdbId;
+                var season = modal.dataset.season;
+                var episode = modal.dataset.episode;
 
-            function collectResults() {
-                var items = document.querySelectorAll('.provider-result-item');
-                var results = [];
-                items.forEach(function (item) {
-                    results.push({
-                        quality: item.dataset.quality || '',
-                        sizeMb: parseFloat(item.dataset.sizeMb) || 0,
-                        downloadUrl: item.dataset.downloadUrl || '',
-                        source: item.dataset.source || '',
-                        filename: item.dataset.filename || ''
+                var loadedProviders = 0;
+                var allLoaded = false;
+                var autoClicked = false;
+                var collectedResults = [];
+
+                function closeModal() {
+                    modal.remove();
+                }
+
+                // Attach close handlers
+                var backdrop = document.getElementById('modal-backdrop');
+                if (backdrop) backdrop.addEventListener('click', closeModal);
+
+                var closeBtn = document.getElementById('modal-close-btn');
+                if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+                function getQualityScore(quality) {
+                    var q = quality.toUpperCase();
+                    if (q.includes('4K') || q.includes('2160')) return 4;
+                    if (q.includes('1080')) return 3;
+                    if (q.includes('720')) return 2;
+                    if (q.includes('480')) return 1;
+                    return 0;
+                }
+
+                function collectResults() {
+                    var items = modal.querySelectorAll('.provider-result-item');
+                    var results = [];
+                    items.forEach(function (item) {
+                        results.push({
+                            quality: item.dataset.quality || '',
+                            sizeMb: parseFloat(item.dataset.sizeMb) || 0,
+                            downloadUrl: item.dataset.downloadUrl || '',
+                            source: item.dataset.source || '',
+                            filename: item.dataset.filename || ''
+                        });
                     });
-                });
-                return results;
-            }
+                    return results;
+                }
 
-            function findBestFromResults(results) {
-                var best = null;
-                var bestScore = -1;
+                function findBestFromResults(results) {
+                    var best = null;
+                    var bestScore = -1;
 
-                results.forEach(function (r) {
-                    var score = getQualityScore(r.quality) * 10000 + r.sizeMb;
-                    if (score > bestScore) {
-                        bestScore = score;
-                        best = r;
-                    }
-                });
-
-                return best;
-            }
-
-            function queueDownloadAndShowToast(result) {
-                var payload = {
-                    url: result.downloadUrl,
-                    quality: result.quality,
-                    source: result.source,
-                    media_type: mediaType,
-                    tmdb_id: tmdbId,
-                    season: season,
-                    episode: episode,
-                    filename: result.filename || ''
-                };
-
-                var displayName = result.filename || result.quality;
-                fetch('/download/queue', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                })
-                    .then(function (response) {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response;
-                    })
-                    .then(function () {
-                        showToast('Download queued: ' + displayName, 'success');
-                        // For episodes, refresh the series modal
-                        if (mediaType !== 'movie') {
-                            htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
+                    results.forEach(function (r) {
+                        var score = getQualityScore(r.quality) * 10000 + r.sizeMb;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            best = r;
                         }
-                    })
-                    .catch(function (error) {
-                        console.error('Download queue failed:', error);
-                        showToast('Failed to queue download', 'error');
                     });
-            }
 
-            function showNoResultsToast() {
-                showToast('No downloads available', 'error');
-            }
+                    return best;
+                }
 
-            function updateStatus(text) {
-                var statusEl = document.getElementById('auto-btn-status');
-                if (statusEl) statusEl.textContent = text;
-            }
+                function queueDownloadAndShowToast(result) {
+                    var payload = {
+                        url: result.downloadUrl,
+                        quality: result.quality,
+                        source: result.source,
+                        media_type: mediaType,
+                        tmdb_id: parseInt(tmdbId),
+                        season: parseInt(season),
+                        episode: parseInt(episode),
+                        filename: result.filename || ''
+                    };
 
-            function showLoading(show) {
-                var icon = document.getElementById('auto-btn-icon');
-                var spinner = document.getElementById('auto-btn-spinner');
-                if (icon) icon.classList.toggle('hidden', show);
-                if (spinner) spinner.classList.toggle('hidden', !show);
-            }
+                    var displayName = result.filename || result.quality;
+                    fetch('/download/queue', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(function (response) {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response;
+                        })
+                        .then(function () {
+                            showToast('Download queued: ' + displayName, 'success');
+                            // For episodes, refresh the series modal
+                            if (mediaType !== 'movie') {
+                                htmx.ajax('GET', '/series/' + tmdbId, '#modal-container');
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('Download queue failed:', error);
+                            showToast('Failed to queue download', 'error');
+                        });
+                }
 
-            // Track provider loading
-            document.body.addEventListener('htmx:afterSwap', function (event) {
-                if (event.detail.target && event.detail.target.id &&
-                    event.detail.target.id.startsWith('provider-')) {
-                    loadedProviders++;
+                function showNoResultsToast() {
+                    showToast('No downloads available', 'error');
+                }
 
-                    // Collect results from this provider
-                    var newResults = collectResults();
-                    collectedResults = newResults;
+                function updateStatus(text) {
+                    var statusEl = document.getElementById('auto-btn-status');
+                    if (statusEl) statusEl.textContent = text;
+                }
 
-                    if (!autoClicked) {
-                        updateStatus('Loading providers (' + loadedProviders + '/' + totalProviders + ')...');
-                    }
+                function showLoading(show) {
+                    var icon = document.getElementById('auto-btn-icon');
+                    var spinner = document.getElementById('auto-btn-spinner');
+                    if (icon) icon.classList.toggle('hidden', show);
+                    if (spinner) spinner.classList.toggle('hidden', !show);
+                }
 
-                    if (loadedProviders >= totalProviders) {
-                        allLoaded = true;
+                // Track provider loading - attach to modal instead of body
+                modal.addEventListener('htmx:afterSwap', function (event) {
+                    if (event.detail.target && event.detail.target.id &&
+                        event.detail.target.id.startsWith('provider-')) {
+                        loadedProviders++;
+
+                        // Collect results from this provider
+                        var newResults = collectResults();
+                        collectedResults = newResults;
+
                         if (!autoClicked) {
-                            var best = findBestFromResults(collectedResults);
-                            if (best) {
-                                updateStatus('Ready - Best: ' + best.quality);
-                                // Show filename below if available
-                                var filenameEl = document.getElementById('auto-btn-filename');
-                                if (filenameEl && best.filename) {
-                                    filenameEl.textContent = best.filename;
-                                    filenameEl.classList.remove('hidden');
-                                }
-                            } else {
-                                updateStatus('No downloads available');
-                            }
+                            updateStatus('Loading providers (' + loadedProviders + '/' + totalProviders + ')...');
                         }
-                    }
-                }
-            });
 
-            // Handle AUTO button click
-            document.getElementById('auto-select-btn').addEventListener('click', function () {
-                if (autoClicked) return; // Prevent double clicks
-                autoClicked = true;
-
-                // Check if we already have results
-                if (allLoaded) {
-                    var best = findBestFromResults(collectedResults);
-                    if (best) {
-                        // Queue download, show toast, then close modal
-                        queueDownloadAndShowToast(best);
-                        var modal = document.getElementById('provider-modal');
-                        if (modal) modal.remove();
-                    } else {
-                        showNoResultsToast();
-                        var modal = document.getElementById('provider-modal');
-                        if (modal) modal.remove();
-                    }
-                } else {
-                    // Still loading - show spinner and wait
-                    showLoading(true);
-                    updateStatus('Waiting for providers...');
-
-                    // Wait for all providers, then queue and close
-                    var startTime = Date.now();
-                    var checkInterval = setInterval(function () {
-                        // Stop if all loaded OR timeout (30s)
-                        if (allLoaded || (Date.now() - startTime > 30000)) {
-                            clearInterval(checkInterval);
-
-                            var best = findBestFromResults(collectedResults);
-                            if (best) {
-                                queueDownloadAndShowToast(best);
-                            } else {
-                                if (!allLoaded) {
-                                    showToast('Timeout waiting for providers', 'error');
+                        if (loadedProviders >= totalProviders) {
+                            allLoaded = true;
+                            if (!autoClicked) {
+                                var best = findBestFromResults(collectedResults);
+                                if (best) {
+                                    updateStatus('Ready - Best: ' + best.quality);
+                                    // Show filename below if available
+                                    var filenameEl = document.getElementById('auto-btn-filename');
+                                    if (filenameEl && best.filename) {
+                                        filenameEl.textContent = best.filename;
+                                        filenameEl.classList.remove('hidden');
+                                    }
                                 } else {
-                                    showNoResultsToast();
+                                    updateStatus('No downloads available');
                                 }
                             }
-                            // Close modal after queuing
-                            var modal = document.getElementById('provider-modal');
-                            if (modal) modal.remove();
                         }
-                    }, 100);
+                    }
+                });
+
+                // Handle AUTO button click
+                var autoBtn = document.getElementById('auto-select-btn');
+                if (autoBtn) {
+                    autoBtn.addEventListener('click', function () {
+                        if (autoClicked) return; // Prevent double clicks
+                        autoClicked = true;
+
+                        // Check if we already have results
+                        if (allLoaded) {
+                            var best = findBestFromResults(collectedResults);
+                            if (best) {
+                                // Queue download, show toast, then close modal
+                                queueDownloadAndShowToast(best);
+                                closeModal();
+                            } else {
+                                showNoResultsToast();
+                                closeModal();
+                            }
+                        } else {
+                            // Still loading - show spinner and wait
+                            showLoading(true);
+                            updateStatus('Waiting for providers...');
+
+                            // Wait for all providers, then queue and close
+                            var startTime = Date.now();
+                            var checkInterval = setInterval(function () {
+                                // Stop if all loaded OR timeout (30s)
+                                if (allLoaded || (Date.now() - startTime > 30000)) {
+                                    clearInterval(checkInterval);
+
+                                    var best = findBestFromResults(collectedResults);
+                                    if (best) {
+                                        queueDownloadAndShowToast(best);
+                                    } else {
+                                        if (!allLoaded) {
+                                            showToast('Timeout waiting for providers', 'error');
+                                        } else {
+                                            showNoResultsToast();
+                                        }
+                                    }
+                                    // Close modal after queuing
+                                    closeModal();
+                                }
+                            }, 100);
+                        }
+                    });
                 }
-            });
-        }) ();
+            })();
         </script>
 
         <!-- Provider Results - Each loads independently -->
