@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0f172a">
+    <title>{% block title %}Mirrarr{% endblock %}</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+
+    <!-- TailwindCSS via CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body class="h-full bg-slate-900 text-slate-100">
+    <!-- Navigation -->
+    <nav class="bg-slate-800 border-b border-slate-700 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <span class="text-2xl">🎬</span>
+                        <span
+                            class="text-xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+                            Mirrarr
+                        </span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/"
+                        class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                        Dashboard
+                    </a>
+                    <a href="/movies"
+                        class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                        Movies
+                    </a>
+                    <a href="/tv"
+                        class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                        TV Shows
+                    </a>
+                    <a href="/downloads"
+                        class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                        Downloads
+                    </a>
+                    <a href="#"
+                        class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                        Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2">
+    </div>
+
+    <!-- Global Toast Function -->
+    <script>
+        /**
+         * Shows a toast notification with the given message and type.
+         * @param {string} message - The message to display in the toast.
+         * @param {string} type - The type of toast ('success', 'error', 'info').
+         */
+        function showToast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toast-container');
+            if (!container) return;
+
+            var colors = {
+                success: 'bg-green-700',
+                error: 'bg-red-700',
+                info: 'bg-slate-700'
+            };
+
+            var icons = {
+                success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />',
+                error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />',
+                info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+            };
+
+            var toast = document.createElement('div');
+            toast.className = 'toast-enter p-4 ' + colors[type] + ' rounded-lg shadow-lg text-white flex items-center gap-3';
+
+            var icon = document.createElement('svg');
+            icon.setAttribute('class', 'h-5 w-5 flex-shrink-0');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'currentColor');
+            icon.setAttribute('viewBox', '0 0 24 24');
+            icon.innerHTML = icons[type];
+
+            var msg = document.createElement('span');
+            msg.textContent = message;
+
+            toast.appendChild(icon);
+            toast.appendChild(msg);
+
+            container.appendChild(toast);
+
+            /** Auto-remove after 3 seconds */
+            setTimeout(function () {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+    <script>
+        function queueDownload(payload) {
+            fetch('/download/queue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(res => res.text().then(text => ({ ok: res.ok, status: res.status, text })))
+                .then(res => {
+                    // Try parsing as JSON first
+                    let json;
+                    try {
+                        json = JSON.parse(res.text);
+                    } catch (e) {
+                        // Not JSON, fall back to HTML
+                    }
+
+                    if (!res.ok) {
+                        console.error("Error:", json || res.text);
+                        const msg = json && (json.detail && json.detail[0] ? json.detail[0].msg : (json.message || 'Unknown error'));
+                        showToast('Error: ' + (msg || 'Request failed'), 'error');
+                        return;
+                    }
+
+                    // Success - check if JSON or HTML
+                    if (json) {
+                        // JSON response (new style)
+                        if (json.message) {
+                            showToast(json.message, 'success');
+                        }
+                    } else if (res.text) {
+                        // HTML response (legacy style - scripts won't execute via innerHTML, but visual elements will)
+                        const container = document.getElementById('toast-container');
+                        if (container) {
+                            const div = document.createElement('div');
+                            div.innerHTML = res.text;
+                            // If it's a script tag (e.g. from auto_download.html), this won't run.
+                            // But visual toasts will work.
+                            const toast = div.firstElementChild;
+                            if (toast && toast.tagName !== 'SCRIPT') {
+                                container.appendChild(toast);
+                                setTimeout(() => toast.remove(), 3000);
+                            } else if (toast && toast.tagName === 'SCRIPT') {
+                                // Execute script if returned (dangerous but needed for legacy)
+                                // Better to move to JSON everywhere
+                                const script = document.createElement('script');
+                                script.textContent = toast.textContent;
+                                document.body.appendChild(script);
+                                setTimeout(() => script.remove(), 100);
+                            }
+                        }
+                    }
+
+                    // Close provider modal
+                    const modal = document.getElementById('provider-modal');
+                    if (modal) modal.remove();
+
+                    // Refresh series modal (if applicable)
+                    if (payload.media_type !== 'movie' && window.htmx) {
+                        htmx.ajax('GET', '/series/' + payload.tmdb_id, '#modal-container');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Network error', 'error');
+                });
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

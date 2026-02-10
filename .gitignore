@@ -11,3 +11,6 @@ wheels/
 .env
 .vscode
 .idea
+
+# Downloads
+downloads/

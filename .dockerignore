@@ -1,0 +1,10 @@
+.git
+.env
+.venv
+.idea
+.vscode
+__pycache__
+*.pyc
+downloads
+mirrarr.db
+data

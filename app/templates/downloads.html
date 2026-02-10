@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Downloads - Mirrarr{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1
+                class="text-3xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+                Downloads
+            </h1>
+            <p class="mt-1 text-slate-400">Monitor your active and completed downloads</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-slate-500">Auto-refreshing every 2s</span>
+            <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+        </div>
+    </div>
+
+    <!-- Downloads List Container (HTMX auto-refresh) -->
+    <div id="downloads-container" hx-get="/downloads/list" hx-trigger="load, every 2s" hx-swap="innerHTML">
+        <!-- Initial content - will be replaced by HTMX -->
+        {% include "partials/download_list.html" %}
+    </div>
+</div>
+{% endblock %}

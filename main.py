@@ -11,7 +11,7 @@ load_dotenv()
 tmdb.API_KEY = os.getenv("TMDB_API_KEY")
 # This call now uses HTTP/2 or HTTP/3 via Niquests!
 search = tmdb.Search()
-response = search.movie(query='The Matrix')
+response = search.movie(query="The Matrix")
 print(response)
 
 
@@ -23,10 +23,10 @@ def main():
     burp0_base_url = "https://rivestream.org:443/api/backendfetch"
     burp0_params = {
         "requestID": "tvVideoProvider",
-        "id": "1418",
-        "season": "1",
-        "episode": "1",
-        "service": "flowcast",
+        "id": "1418",  # TMDB ID
+        "season": "1",  # Season Number
+        "episode": "1",  # Episode Number
+        "service": "flowcast",  # Service Name
         "secretKey": "NGFmNjhjZDg=",
         "proxyMode": "noProxy",
     }
