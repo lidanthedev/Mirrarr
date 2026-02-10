@@ -44,10 +44,9 @@ def _rename_downloaded_file(downloaded_file: str, custom_filename: str) -> str |
 
     # Get directory and extension from downloaded file
     download_dir = os.path.dirname(downloaded_file)
-    _, ext = os.path.splitext(downloaded_file)
 
     # Create new filename with proper extension
-    new_path = os.path.join(download_dir, f"{custom_filename}{ext}")
+    new_path = os.path.join(download_dir, f"{custom_filename}")
 
     try:
         shutil.move(downloaded_file, new_path)

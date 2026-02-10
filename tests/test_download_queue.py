@@ -32,6 +32,17 @@ def mock_provider():
     if provider.name in ProviderRegistry._providers:
         del ProviderRegistry._providers[provider.name]
 
+    # Reset download manager state
+    from app.services.download_manager import manager
+
+    if hasattr(manager, "download_status"):
+        manager.download_status.clear()
+    if hasattr(manager, "_worker_tasks"):
+        # Cancel any pending tasks to avoid warnings
+        for task in manager._worker_tasks:
+            task.cancel()
+        manager._worker_tasks.clear()
+
 
 @pytest.fixture
 def client(mock_provider):

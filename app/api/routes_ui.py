@@ -1,5 +1,6 @@
 """UI routes returning HTML via Jinja2 templates."""
 
+from pydantic import AfterValidator
 from typing import Annotated
 from pydantic import HttpUrl
 import logging
@@ -250,7 +251,7 @@ async def episode_auto(
         provider_name = best.provider_name
         provider = ProviderRegistry.get(provider_name)
         if provider is None:
-            logging.warning(f"Provider '{provider_name}' not found in registry")
+            logger.warning(f"Provider '{provider_name}' not found in registry")
             return templates.TemplateResponse(
                 request=request,
                 name="partials/toast.html",
@@ -309,7 +310,7 @@ async def movie_auto(
         provider_name = best.provider_name
         provider = ProviderRegistry.get(provider_name)
         if provider is None:
-            logging.warning(f"Provider '{provider_name}' not found in registry")
+            logger.warning(f"Provider '{provider_name}' not found in registry")
             return templates.TemplateResponse(
                 request=request,
                 name="partials/toast.html",
@@ -351,8 +352,11 @@ async def movie_auto(
     )
 
 
+ValidUrl = Annotated[str, AfterValidator(lambda v: str(HttpUrl(v)))]
+
+
 class DownloadQueueRequest(BaseModel):
-    url: Annotated[str, HttpUrl]
+    url: ValidUrl
     quality: str = ""
     source: str = ""
     media_type: str = "movie"
