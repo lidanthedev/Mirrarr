@@ -35,6 +35,13 @@ def _rename_downloaded_file(downloaded_file: str, custom_filename: str) -> str |
     if not downloaded_file or not os.path.exists(downloaded_file):
         return None
 
+    # Sanitize custom_filename to prevent path traversal
+    custom_filename = os.path.basename(custom_filename)
+    # Allow only alphanumeric, underscores, hyphens, and dots
+    custom_filename = re.sub(r"[^\w\.-]", "_", custom_filename)
+    if not custom_filename:
+        return None
+
     # Get directory and extension from downloaded file
     download_dir = os.path.dirname(downloaded_file)
     _, ext = os.path.splitext(downloaded_file)
@@ -80,6 +87,8 @@ class DownloadJob(TypedDict):
 
 # Global state: mapping download IDs to their status
 download_status: dict[str, DownloadStatus] = {}
+# Private mapping for temporary filenames (not exposed in API)
+_temp_filenames: dict[str, str] = {}
 
 
 class DownloadManager:
@@ -92,6 +101,7 @@ class DownloadManager:
             max_workers=max_concurrent_downloads
         )
         self._worker_tasks: list[asyncio.Task[None]] = []
+        self._requeue_tasks: set[asyncio.Task] = set()
 
         # Default yt_dlp options
         self.default_opts: dict[str, Any] = {
@@ -117,8 +127,16 @@ class DownloadManager:
         for task in self._worker_tasks:
             task.cancel()
         # Wait for all tasks to finish cancellation
+        # Wait for all tasks to finish cancellation
         await asyncio.gather(*self._worker_tasks, return_exceptions=True)
         self._worker_tasks.clear()
+
+        # Cancel any pending requeue tasks
+        for task in self._requeue_tasks:
+            task.cancel()
+        if self._requeue_tasks:
+            await asyncio.gather(*self._requeue_tasks, return_exceptions=True)
+        self._requeue_tasks.clear()
         self.executor.shutdown(wait=False)
 
     async def _worker(self, worker_name: str) -> None:
@@ -151,7 +169,9 @@ class DownloadManager:
 
             if retry_delay:
                 # Re-queue the job after delay (non-blocking)
-                asyncio.create_task(self._requeue_job(job, retry_delay))
+                task = asyncio.create_task(self._requeue_job(job, retry_delay))
+                self._requeue_tasks.add(task)
+                task.add_done_callback(self._requeue_tasks.discard)
             else:
                 # Success or fatal error
                 print(f"[{worker_name}] Finished: {url}")
@@ -203,8 +223,9 @@ class DownloadManager:
 
             elif d["status"] == "finished":
                 download_status[download_id]["status"] = "processing"
+                download_status[download_id]["status"] = "processing"
                 # Store the actual downloaded filename for renaming
-                download_status[download_id]["_downloaded_file"] = d.get("filename")
+                _temp_filenames[download_id] = d.get("filename")
                 total_bytes = d.get("total_bytes")
                 if total_bytes:
                     download_status[download_id]["total_bytes"] = _format_bytes(
@@ -233,9 +254,7 @@ class DownloadManager:
             if download_id in download_status:
                 # Handle file renaming if custom filename was provided
                 if custom_filename:
-                    downloaded_file = download_status[download_id].get(
-                        "_downloaded_file"
-                    )
+                    downloaded_file = _temp_filenames.pop(download_id, None)
                     if downloaded_file:
                         new_path = _rename_downloaded_file(
                             downloaded_file, custom_filename

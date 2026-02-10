@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.models.media import Movie, TVSeries, Season, Episode
 import logging
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -260,21 +261,47 @@ def _get_series_details_sync(tmdb_id: int) -> TVSeries:
 
     # Parse seasons (excluding specials - season 0) and fetch episodes for each
     seasons = []
-    for s in info.get("seasons", []):
-        if s.get("season_number", 0) > 0:
-            # Fetch episodes for this season
-            # Note: calling the synchronous version here since we are inside a thread
-            episodes = _get_season_episodes_sync(tmdb_id, s["season_number"])
-            seasons.append(
-                Season(
-                    season_number=s["season_number"],
-                    name=s.get("name", f"Season {s['season_number']}"),
-                    episode_count=s.get("episode_count", 0),
-                    air_date=s.get("air_date"),
-                    overview=s.get("overview", ""),
-                    episodes=episodes,
+    season_data_list = [
+        s for s in info.get("seasons", []) if s.get("season_number", 0) > 0
+    ]
+
+    # Fetch episodes concurrently
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_season = {
+            executor.submit(_get_season_episodes_sync, tmdb_id, s["season_number"]): s
+            for s in season_data_list
+        }
+
+        season_episodes_map = {}
+        for future in as_completed(future_to_season):
+            s = future_to_season[future]
+            sn = s["season_number"]
+            try:
+                episodes = future.result()
+                season_episodes_map[sn] = episodes
+            except Exception as exc:
+                logger.error(
+                    "Failed to fetch episodes for season %s of show %s: %s",
+                    sn,
+                    tmdb_id,
+                    exc,
                 )
+                season_episodes_map[sn] = []
+
+    # Build Season objects in order
+    for s in season_data_list:
+        sn = s["season_number"]
+        episodes = season_episodes_map.get(sn, [])
+        seasons.append(
+            Season(
+                season_number=sn,
+                name=s.get("name", f"Season {sn}"),
+                episode_count=s.get("episode_count", 0),
+                air_date=s.get("air_date"),
+                overview=s.get("overview", ""),
+                episodes=episodes,
             )
+        )
 
     return TVSeries(
         id=info["id"],

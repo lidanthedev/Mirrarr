@@ -544,7 +544,10 @@ class RiveStreamProvider(ProviderInterface):
         )
         response.raise_for_status()
         try:
-            data = response.json()["data"]
+            json_data = response.json()
+            if "error" in json_data:
+                return []
+            data = json_data["data"]
         except Exception:
             logger.exception(
                 "Error decoding JSON from %s: %s", service, response.text, exc_info=True

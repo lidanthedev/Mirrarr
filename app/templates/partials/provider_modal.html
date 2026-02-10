@@ -126,17 +126,25 @@
             }
 
             function queueDownloadAndShowToast(result) {
-                var url = '/download/queue?url=' + encodeURIComponent(result.downloadUrl) +
-                    '&quality=' + encodeURIComponent(result.quality) +
-                    '&source=' + encodeURIComponent(result.source) +
-                    '&media_type=' + encodeURIComponent(mediaType) +
-                    '&tmdb_id=' + encodeURIComponent(tmdbId) +
-                    '&season=' + encodeURIComponent(season) +
-                    '&episode=' + encodeURIComponent(episode) +
-                    '&filename=' + encodeURIComponent(result.filename || '');
+                var payload = {
+                    url: result.downloadUrl,
+                    quality: result.quality,
+                    source: result.source,
+                    media_type: mediaType,
+                    tmdb_id: tmdbId,
+                    season: season,
+                    episode: episode,
+                    filename: result.filename || ''
+                };
 
                 var displayName = result.filename || result.quality;
-                fetch(url)
+                fetch('/download/queue', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
                     .then(function (response) {
                         if (!response.ok) throw new Error('Network response was not ok');
                         return response;

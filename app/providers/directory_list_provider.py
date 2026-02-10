@@ -8,6 +8,14 @@ from cachetools import TTLCache
 
 from app.models.media import Movie, TVSeries
 from app.providers.base import EpisodeResult, MovieResult, ProviderInterface
+from urllib3.util.retry import Retry
+
+retry_config = Retry(
+    total=5,
+    backoff_factor=5,
+    status_forcelist=[500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"],
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -113,7 +121,9 @@ class DirectoryListProvider(ProviderInterface):
         headers = {"User-Agent": "Mozilla/5.0"}
 
         try:
-            response = await niquests.aget(target_url, headers=headers)
+            response = await niquests.aget(
+                target_url, headers=headers, retries=retry_config
+            )
             response.raise_for_status()
             result = await self._parse_directory_html(response.text, target_url)
             cache[target_url] = result  # Cache the result, not the coroutine
@@ -204,7 +214,7 @@ class DirectoryListProvider(ProviderInterface):
             quality_type = "HDTV"
         elif "dvdrip" in name_lower or "dvd" in name_lower:
             quality_type = "DVDRip"
-        elif "cam" in name_lower or "hdcam" in name_lower:
+        elif re.search(r"\b(?:hd)?cam\b", name_lower):
             quality_type = "CAM"
         elif "web" in name_lower:
             quality_type = "WEB"
@@ -284,14 +294,19 @@ class DirectoryListProvider(ProviderInterface):
             entry_name_lower = entry.name.lower()
 
             # Check if this is a season folder
+            is_season_folder = False
             for pattern in season_patterns:
                 if pattern in entry_name_lower:
+                    is_season_folder = True
                     # Found season folder, get episodes from it
                     season_contents = await self.get_directory_contents(entry.path)
                     for ep_entry in season_contents:
                         if self._matches_episode(ep_entry.name, season, episode):
                             results.append(ep_entry)
                     break
+
+            if is_season_folder:
+                continue
 
             # Also check if episodes are directly in series folder
             if entry.name.endswith(VIDEO_EXTENSIONS):
@@ -306,11 +321,11 @@ class DirectoryListProvider(ProviderInterface):
 
         # Common patterns: S01E01, s01e01, 1x01, etc.
         patterns = [
-            rf"s{season:02d}e{episode:02d}",
-            rf"s{season}e{episode}",
-            rf"{season}x{episode:02d}",
-            rf"{season}x{episode}",
-            rf"season\s*{season}.*episode\s*{episode}",
+            rf"\bs{season:02d}e{episode:02d}\b",
+            rf"\bs{season}e{episode}\b",
+            rf"\b{season}x{episode:02d}\b",
+            rf"\b{season}x{episode}\b",
+            rf"\bseason\s*{season}\b.*\bepisode\s*{episode}\b",
         ]
 
         for pattern in patterns:

@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" href="/static/favicon.png">
 
     <!-- TailwindCSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -137,6 +137,49 @@
             setTimeout(function () {
                 toast.remove();
             }, 3000);
+        }
+    </script>
+    <script>
+        function queueDownload(payload) {
+            fetch('/download/queue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(res => res.text().then(text => ({ ok: res.ok, status: res.status, text })))
+                .then(res => {
+                    if (!res.ok) {
+                        try {
+                            const json = JSON.parse(res.text);
+                            console.error("Error:", json);
+                            showToast('Error: ' + (json.detail && json.detail[0] ? json.detail[0].msg : 'Unknown'), 'error');
+                        } catch (e) { showToast('Request failed', 'error'); }
+                        return;
+                    }
+                    // Success - show toast from HTML partial
+                    const container = document.getElementById('toast-container');
+                    if (container && res.text) {
+                        const div = document.createElement('div');
+                        div.innerHTML = res.text;
+                        const toast = div.firstElementChild;
+                        if (toast) {
+                            container.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3000);
+                        }
+                    }
+                    // Close provider modal
+                    const modal = document.getElementById('provider-modal');
+                    if (modal) modal.remove();
+
+                    // Refresh series modal (if applicable)
+                    if (payload.media_type !== 'movie' && window.htmx) {
+                        htmx.ajax('GET', '/series/' + payload.tmdb_id, '#modal-container');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Network error', 'error');
+                });
         }
     </script>
 

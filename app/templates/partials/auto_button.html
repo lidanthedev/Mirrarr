@@ -1,10 +1,16 @@
 <!-- AUTO Button - Best Quality (also triggers toast) -->
 {% if best_result %}
-<button
-    hx-post="/download/queue?url={{ best_result.download_url | urlencode }}&quality={{ best_result.quality | urlencode }}&source={{ best_result.source_site | urlencode }}&media_type={{ media_type }}&tmdb_id={{ tmdb_id }}&season={{ season }}&episode={{ episode }}"
-    hx-target="#toast-container" hx-swap="innerHTML" {% if media_type=='movie' %}
-    hx-on::after-request="document.getElementById('provider-modal').remove()" {% else %}
-    hx-on::after-request="htmx.ajax('GET', '/series/{{ tmdb_id }}', '#modal-container')" {% endif %}
+{% set payload = {
+"url": best_result.download_url,
+"quality": best_result.quality,
+"source": best_result.source_site,
+"media_type": media_type,
+"tmdb_id": tmdb_id,
+"season": season,
+"episode": episode,
+"filename": best_result.filename or ""
+} %}
+<button onclick="queueDownload({{ payload | tojson | forceescape }})"
     class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25">
     <div class="flex items-center gap-3">
         <div class="p-2 bg-white/20 rounded-lg">

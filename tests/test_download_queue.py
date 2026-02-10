@@ -42,8 +42,8 @@ def test_download_queue_post():
         "filename": "Test Movie (2023).mp4",
     }
 
-    # Make POST request
-    response = client.post("/download/queue", params=params)
+    # Make POST request with JSON body
+    response = client.post("/download/queue", json=params)
 
     assert response.status_code == 200, (
         f"Expected 200 OK, got {response.status_code}: {response.text}"

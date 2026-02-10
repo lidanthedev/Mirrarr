@@ -3,8 +3,10 @@
 import logging
 from pathlib import Path
 
+import asyncio
 from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from app.services.tmdb import (
     search_tmdb,
@@ -22,6 +24,7 @@ from app.providers import ProviderRegistry
 from app.services.download_manager import manager
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Templates directory
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -158,12 +161,21 @@ async def provider_result(
 
     Called by HTMX on page load for each provider to enable incremental loading.
     """
-    if media_type == "movie":
-        _, results = await get_single_provider_results_for_movie(tmdb_id, provider_name)
-    else:
-        _, results = await get_single_provider_results_for_episode(
-            tmdb_id, season, episode, provider_name
-        )
+    try:
+        if media_type == "movie":
+            _, results = await get_single_provider_results_for_movie(
+                tmdb_id, provider_name
+            )
+        else:
+            _, results = await get_single_provider_results_for_episode(
+                tmdb_id, season, episode, provider_name
+            )
+    except asyncio.CancelledError:
+        logger.warning(f"Request cancelled for provider {provider_name}")
+        results = []
+    except Exception as e:
+        logger.error(f"Error fetching results for provider {provider_name}: {e}")
+        results = []
 
     return templates.TemplateResponse(
         "partials/provider_result.html",
@@ -326,22 +338,34 @@ async def movie_auto(
     )
 
 
+class DownloadQueueRequest(BaseModel):
+    url: str
+    quality: str = ""
+    source: str = ""
+    media_type: str = "movie"
+    tmdb_id: int = 0
+    season: int = 1
+    episode: int = 1
+    filename: str = ""
+
+
 @router.post("/download/queue")
 async def download_queue(
     request: Request,
-    url: str,
-    quality: str = "",
-    source: str = "",
-    media_type: str = "movie",
-    tmdb_id: int = 0,
-    season: int = 1,
-    episode: int = 1,
-    filename: str = "",
+    download_req: DownloadQueueRequest,
 ):
     """Queue a download via yt_dlp download manager.
 
     Shows toast notification and actually queues the download.
     """
+    url = download_req.url
+    quality = download_req.quality
+    source = download_req.source
+    media_type = download_req.media_type
+    tmdb_id = download_req.tmdb_id
+    season = download_req.season
+    episode = download_req.episode
+    filename = download_req.filename
     provider = ProviderRegistry.get(source)
     if provider is None:
         logging.warning(f"Provider '{source}' not found in registry")

@@ -1,6 +1,7 @@
 """API routes returning JSON for HTMX or external tools."""
 
 from typing import Any, List
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -56,6 +57,13 @@ class DownloadRequest(BaseModel):
 @router.post("/downloads")
 async def queue_download(request: DownloadRequest):
     """Queue a new download."""
+
+    parsed = urlparse(request.url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=400, detail="Invalid URL scheme. Only http/https are allowed."
+        )
+
     download_id = await manager.add_download(request.url, request.opts)
     return {"id": download_id, "status": "queued"}
 
