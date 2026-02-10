@@ -32,6 +32,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Create a non-root user and switch to it
 RUN useradd -m -u 1000 mirarr && \
+    mkdir -p /app/downloads /app/data && \
     chown -R mirarr:mirarr /app
 
 USER mirarr
