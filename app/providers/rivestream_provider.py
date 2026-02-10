@@ -537,38 +537,52 @@ class RiveStreamProvider(ProviderInterface):
             "secretKey": self.rive_solver.solve(series.id),
             "proxyMode": "noProxy",
         }
-        response: Response = await niquests.aget(
-            "https://rivestream.org/api/backendfetch",
-            params=params,
-            timeout=RIVESTREAM_TIMEOUT,
-        )
-        response.raise_for_status()
+        response = None
         try:
+            response = await niquests.aget(
+                "https://rivestream.org/api/backendfetch",
+                params=params,
+                timeout=RIVESTREAM_TIMEOUT,
+            )
+            response.raise_for_status()
             json_data = response.json()
-            if "error" in json_data:
-                return []
-            data = json_data["data"]
-        except Exception:
-            logger.exception(
-                "Error decoding JSON from %s: %s", service, response.text, exc_info=True
+        except (niquests.exceptions.RequestException, ValueError) as exc:
+            resp_text = response.text if response else "N/A"
+            logger.warning(
+                "get_series_episode_with_service error for %s: %s. Response: %s",
+                service,
+                exc,
+                resp_text,
             )
             return []
+
+        if "error" in json_data:
+            return []
+        data = json_data.get("data")
         if data is None or "sources" not in data:
             return []
         sources = data["sources"]
         episodes = []
         for source in sources:
+            url = source.get("url")
+            quality = source.get("quality")
+            fmt = source.get("format")
+
+            if not url or not quality or not fmt:
+                continue
+
+            size = source.get("size", 0)
             episodes.append(
                 EpisodeResult(
                     provider_name=self.name,
                     title=f"{series.title} S{season:02d}E{episode:02d}",
                     season=season,
                     episode=episode,
-                    download_url=source["url"],
-                    quality=f"{source['quality']}p-{source['format']}",
-                    size=source.get("size", 0),
+                    download_url=url,
+                    quality=f"{quality}p-{fmt}",
+                    size=size,
                     source_site=self.name,
-                    filename=f"{series.title} S{season:02d}E{episode:02d} - {source['quality']}p - {service}.{source['format']}",
+                    filename=f"{series.title} S{season:02d}E{episode:02d} - {quality}p - {service}.{fmt}",
                 )
             )
         cache[cache_key] = episodes

@@ -35,8 +35,9 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 async def dashboard(request: Request):
     """Render the main dashboard page (search all)."""
     return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "media_type": "all", "page_title": "Search for Content"},
+        request=request,
+        name="dashboard.html",
+        context={"media_type": "all", "page_title": "Search for Content"},
     )
 
 
@@ -44,8 +45,9 @@ async def dashboard(request: Request):
 async def movies_page(request: Request):
     """Render the movies search page."""
     return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "media_type": "movie", "page_title": "Search Movies"},
+        request=request,
+        name="dashboard.html",
+        context={"media_type": "movie", "page_title": "Search Movies"},
     )
 
 
@@ -53,8 +55,9 @@ async def movies_page(request: Request):
 async def tv_page(request: Request):
     """Render the TV shows search page."""
     return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "media_type": "tv", "page_title": "Search TV Shows"},
+        request=request,
+        name="dashboard.html",
+        context={"media_type": "tv", "page_title": "Search TV Shows"},
     )
 
 
@@ -75,8 +78,9 @@ async def search(
     results = await search_tmdb(query, mt)
 
     return templates.TemplateResponse(
-        "partials/search_results.html",
-        {"request": request, "results": results, "query": query},
+        request=request,
+        name="partials/search_results.html",
+        context={"results": results, "query": query},
     )
 
 
@@ -89,9 +93,9 @@ async def series_modal(
     series = await get_series_details(tmdb_id)
 
     return templates.TemplateResponse(
-        "partials/series_modal.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/series_modal.html",
+        context={
             "series": series,
             "seasons": series.seasons,
         },
@@ -133,9 +137,9 @@ async def provider_modal(
     provider_names = ProviderRegistry.names()
 
     return templates.TemplateResponse(
-        "partials/provider_modal.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/provider_modal.html",
+        context={
             "provider_names": provider_names,
             "title": title,
             "poster_url": poster_url,
@@ -178,9 +182,9 @@ async def provider_result(
         results = []
 
     return templates.TemplateResponse(
-        "partials/provider_result.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/provider_result.html",
+        context={
             "provider_name": provider_name,
             "provider_results": results,
             "media_type": media_type,
@@ -211,9 +215,9 @@ async def auto_button(
     best_result = select_best_result(results)
 
     return templates.TemplateResponse(
-        "partials/auto_button.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/auto_button.html",
+        context={
             "best_result": best_result,
             "media_type": media_type,
             "tmdb_id": tmdb_id,
@@ -245,9 +249,9 @@ async def episode_auto(
         if provider is None:
             logging.warning(f"Provider '{provider_name}' not found in registry")
             return templates.TemplateResponse(
-                "partials/toast.html",
-                {
-                    "request": request,
+                request=request,
+                name="partials/toast.html",
+                context={
                     "message": f"Provider '{provider_name}' not found",
                     "type": "error",
                 },
@@ -263,9 +267,9 @@ async def episode_auto(
         display_name = filename if filename else best.quality
 
         return templates.TemplateResponse(
-            "partials/auto_download.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/auto_download.html",
+            context={
                 "download_url": best.download_url,
                 "quality": best.quality,
                 "source": best.source_site,
@@ -276,8 +280,9 @@ async def episode_auto(
         )
 
     return templates.TemplateResponse(
-        "partials/toast.html",
-        {"request": request, "message": "No downloads available", "type": "error"},
+        request=request,
+        name="partials/toast.html",
+        context={"message": "No downloads available", "type": "error"},
     )
 
 
@@ -301,9 +306,9 @@ async def movie_auto(
         if provider is None:
             logging.warning(f"Provider '{provider_name}' not found in registry")
             return templates.TemplateResponse(
-                "partials/toast.html",
-                {
-                    "request": request,
+                request=request,
+                name="partials/toast.html",
+                context={
                     "message": f"Provider '{provider_name}' not found",
                     "type": "error",
                 },
@@ -320,9 +325,9 @@ async def movie_auto(
         display_name = filename if filename else best.quality
 
         return templates.TemplateResponse(
-            "partials/auto_download.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/auto_download.html",
+            context={
                 "download_url": best.download_url,
                 "quality": best.quality,
                 "source": best.source_site,
@@ -333,8 +338,9 @@ async def movie_auto(
         )
 
     return templates.TemplateResponse(
-        "partials/toast.html",
-        {"request": request, "message": "No downloads available", "type": "error"},
+        request=request,
+        name="partials/toast.html",
+        context={"message": "No downloads available", "type": "error"},
     )
 
 
@@ -370,9 +376,9 @@ async def download_queue(
     if provider is None:
         logging.warning(f"Provider '{source}' not found in registry")
         return templates.TemplateResponse(
-            "partials/toast.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/toast.html",
+            context={
                 "message": f"Provider '{source}' not found",
                 "type": "error",
             },
@@ -401,9 +407,9 @@ async def download_queue(
     display_name = filename if filename else quality
 
     return templates.TemplateResponse(
-        "partials/auto_download.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/auto_download.html",
+        context={
             "download_url": url,
             "quality": quality,
             "source": source,
@@ -419,9 +425,9 @@ async def downloads_page(request: Request):
     """Render the downloads management page."""
     downloads = manager.get_all_downloads()
     return templates.TemplateResponse(
-        "downloads.html",
-        {
-            "request": request,
+        request=request,
+        name="downloads.html",
+        context={
             "downloads": downloads,
             "page_title": "Downloads",
         },
@@ -433,9 +439,9 @@ async def downloads_list_partial(request: Request):
     """Return the downloads list partial (for HTMX polling)."""
     downloads = manager.get_all_downloads()
     return templates.TemplateResponse(
-        "partials/download_list.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/download_list.html",
+        context={
             "downloads": downloads,
         },
     )

@@ -65,4 +65,4 @@ Providers must implement the `ProviderInterface` defined in `app/providers/base.
     -   Run `uvx ruff check .` and `uvx ruff format .`
 -   **Testing**: Use `pytest`.
     -   Run `uv run pytest`.
-    -   **Verification**: All verify scripts must be written as `pytest` tests, not simple scripts.
+    -   **Verification**: All verify scripts must be written as `pytest` tests, not simple scripts. And keep them.

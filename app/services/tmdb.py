@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.models.media import Movie, TVSeries, Season, Episode
 import logging
 import requests
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ class TMDBError(Exception):
 
 movie_cache = TTLCache(maxsize=100, ttl=1800)
 series_cache = TTLCache(maxsize=100, ttl=1800)
+
+movie_cache_lock = threading.Lock()
+series_cache_lock = threading.Lock()
 
 # Initialize TMDB
 settings = get_settings()
@@ -176,7 +180,7 @@ async def search_tmdb(
         return await search_all(query)
 
 
-@cached(movie_cache)
+@cached(movie_cache, lock=movie_cache_lock)
 def _get_movie_details_sync(tmdb_id: int) -> Movie:
     """Fetch full movie details from TMDB (synchronous, cached)."""
     movie_api = tmdb.Movies(tmdb_id)
@@ -184,7 +188,7 @@ def _get_movie_details_sync(tmdb_id: int) -> Movie:
         info = movie_api.info()
     except Exception as exc:
         logger.error("Failed to fetch movie details for ID %s: %s", tmdb_id, exc)
-        raise TMDBError(f"Failed to fetch movie details for ID {tmdb_id}", exc)
+        raise TMDBError(f"Failed to fetch movie details for ID {tmdb_id}", exc) from exc
 
     poster_path = info.get("poster_path")
     backdrop_path = info.get("backdrop_path")
@@ -228,7 +232,7 @@ def _get_season_episodes_sync(tmdb_id: int, season_number: int) -> List[Episode]
         )
         raise TMDBError(
             f"Failed to fetch season episodes for ID {tmdb_id} S{season_number}", exc
-        )
+        ) from exc
 
     episodes = []
     for ep in info.get("episodes", []):
@@ -245,7 +249,7 @@ def _get_season_episodes_sync(tmdb_id: int, season_number: int) -> List[Episode]
     return episodes
 
 
-@cached(series_cache)
+@cached(series_cache, lock=series_cache_lock)
 def _get_series_details_sync(tmdb_id: int) -> TVSeries:
     """Fetch full TV series details from TMDB including seasons and episodes (synchronous, cached)."""
     tv_api = tmdb.TV(tmdb_id)
@@ -253,7 +257,9 @@ def _get_series_details_sync(tmdb_id: int) -> TVSeries:
         info = tv_api.info()
     except Exception as exc:
         logger.error("Failed to fetch series details for ID %s: %s", tmdb_id, exc)
-        raise TMDBError(f"Failed to fetch series details for ID {tmdb_id}", exc)
+        raise TMDBError(
+            f"Failed to fetch series details for ID {tmdb_id}", exc
+        ) from exc
 
     poster_path = info.get("poster_path")
     backdrop_path = info.get("backdrop_path")
