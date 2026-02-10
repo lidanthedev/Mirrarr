@@ -15,7 +15,7 @@ A "Sonarr-like" personal video recorder (PVR) for Direct Download (DDL) content.
 
 1.  **Clone the repository**:
     ```bash
-    git clone <repository_url>
+    git clone https://github.com/lidanthedev/Mirrarr.git
     cd Mirrarr
     ```
 
@@ -23,7 +23,7 @@ A "Sonarr-like" personal video recorder (PVR) for Direct Download (DDL) content.
     Create a `.env` file in the root directory. You can use `.env.example` as a template if available.
     Required variables:
     ```env
-    TMDB_API_KEY=your_tmdb_api_key_here
+    TMDB_API_KEY=your_tmdb_api_key_here # Get one at https://www.themoviedb.org/settings/api
     ```
 
 3.  **Run with Docker Compose**:
