@@ -30,12 +30,8 @@ RUN uv sync --frozen --no-dev
 # Place the virtual environment path in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Create a non-root user and switch to it
-RUN useradd -m -u 1000 mirarr && \
-    mkdir -p /app/downloads /app/data && \
-    chown -R mirarr:mirarr /app
-
-USER mirarr
+# Create directories for mounted volumes
+RUN mkdir -p /app/downloads /app/data
 
 EXPOSE 8000
 
