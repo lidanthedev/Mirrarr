@@ -127,7 +127,6 @@ class DownloadManager:
         for task in self._worker_tasks:
             task.cancel()
         # Wait for all tasks to finish cancellation
-        # Wait for all tasks to finish cancellation
         await asyncio.gather(*self._worker_tasks, return_exceptions=True)
         self._worker_tasks.clear()
 
@@ -222,7 +221,6 @@ class DownloadManager:
                     )
 
             elif d["status"] == "finished":
-                download_status[download_id]["status"] = "processing"
                 download_status[download_id]["status"] = "processing"
                 # Store the actual downloaded filename for renaming
                 _temp_filenames[download_id] = d.get("filename")

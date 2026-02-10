@@ -1,12 +1,14 @@
 """UI routes returning HTML via Jinja2 templates."""
 
+from typing import Annotated
+from pydantic import HttpUrl
 import logging
 from pathlib import Path
 
 import asyncio
 from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.services.tmdb import (
     search_tmdb,
@@ -260,9 +262,11 @@ async def episode_auto(
         download_id = await manager.add_download(
             best.download_url, client_opts=yt_opts, custom_filename=filename or None
         )
-        print(
-            f"[DOWNLOAD QUEUED] ID={download_id} {best.quality} from {best.source_site}: {best.download_url}"
+        msg = (
+            f"[DOWNLOAD QUEUED] ID={download_id} {best.quality} "
+            f"from {best.source_site}: {best.download_url}"
         )
+        logger.info(msg)
 
         display_name = filename if filename else best.quality
 
@@ -318,9 +322,11 @@ async def movie_auto(
             custom_filename=filename or None,
             client_opts=provider.get_yt_opts(),
         )
-        print(
-            f"[DOWNLOAD QUEUED] ID={download_id} {best.quality} from {best.source_site}: {best.download_url}"
+        msg = (
+            f"[DOWNLOAD QUEUED] ID={download_id} {best.quality} "
+            f"from {best.source_site}: {best.download_url}"
         )
+        logger.info(msg)
 
         display_name = filename if filename else best.quality
 
@@ -345,7 +351,7 @@ async def movie_auto(
 
 
 class DownloadQueueRequest(BaseModel):
-    url: str
+    url: Annotated[str, HttpUrl]
     quality: str = ""
     source: str = ""
     media_type: str = "movie"
@@ -401,7 +407,7 @@ async def download_queue(
         client_opts=provider.get_yt_opts(),
         metadata=metadata,
     )
-    print(f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}")
+    logger.info(f"[DOWNLOAD QUEUED] ID={download_id} {quality} from {source}: {url}")
 
     # Use filename for display, fallback to quality
     display_name = filename if filename else quality

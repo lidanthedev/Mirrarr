@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.services.download_manager import manager
@@ -21,13 +22,24 @@ class MockProvider(ProviderInterface):
         return {"test": "opts"}
 
 
-# Register it BEFORE creating the client effectively (although client is created at module level, app is shared)
-ProviderRegistry.register(MockProvider())
+@pytest.fixture
+def mock_provider():
+    """Register MockProvider for the test and unregister it after."""
+    provider = MockProvider()
+    ProviderRegistry.register(provider)
+    yield provider
+    # Cleanup: remove from registry (assuming we can access the dict directly for tests)
+    if provider.name in ProviderRegistry._providers:
+        del ProviderRegistry._providers[provider.name]
 
-client = TestClient(app)
+
+@pytest.fixture
+def client(mock_provider):
+    """Create a TestClient with the mock provider registered."""
+    return TestClient(app)
 
 
-def test_download_queue_post():
+def test_download_queue_post(client):
     """Test that the download queue endpoint works with POST and stores metadata."""
 
     # Metadata params

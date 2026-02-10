@@ -109,7 +109,7 @@ def _search_movies_sync(query: str) -> List[TMDBSearchResult]:
     try:
         search.movie(query=query)
         return [_parse_movie_search(m) for m in search.results[:12]]
-    except (requests.exceptions.RequestException, tmdb.APIError) as exc:
+    except (requests.exceptions.RequestException, tmdb.APIKeyError) as exc:
         logger.error("Error searching movies for '%s': %s", query, exc)
         return []
     except Exception as exc:
@@ -128,7 +128,7 @@ def _search_series_sync(query: str) -> List[TMDBSearchResult]:
     try:
         search.tv(query=query)
         return [_parse_series_search(s) for s in search.results[:12]]
-    except (requests.exceptions.RequestException, tmdb.APIError) as exc:
+    except (requests.exceptions.RequestException, tmdb.APIKeyError) as exc:
         logger.error("Error searching series for '%s': %s", query, exc)
         return []
     except Exception as exc:
@@ -155,7 +155,7 @@ def _search_all_sync(query: str) -> List[TMDBSearchResult]:
                 results.append(_parse_series_search(item))
             # Skip "person" results
         return results
-    except (requests.exceptions.RequestException, tmdb.APIError) as exc:
+    except (requests.exceptions.RequestException, tmdb.APIKeyError) as exc:
         logger.error("Error searching all for '%s': %s", query, exc)
         return []
     except Exception as exc:
