@@ -34,18 +34,32 @@
 ```python
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 
-class SearchResult(BaseModel):
+class DownloadResult(BaseModel):
     title: str
-    size_mb: float
+    quality: str
+    size: int
     download_url: str
+    provider_name: str = ""
     source_site: str
+    filename: str = ""  # Original filename from provider
+    # Episode-specific fields
+    season: int | None = None
+    episode: int | None = None
+
+# Backwards compatibility
+class MovieResult(DownloadResult):
+    pass
+
+class EpisodeResult(DownloadResult):
+    pass
 
 class ProviderInterface(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
+        """Return the unique name of this provider."""
         pass
 
     @abstractmethod
@@ -56,12 +70,14 @@ class ProviderInterface(ABC):
     async def get_series_episode(
         self,
         series: TVSeries,
-        season: Season,
-        episode: Episode,
+        season: int,
+        episode: int,
     ) -> List[EpisodeResult]:
         pass
 
-
+    def get_yt_opts(self) -> dict[str, Any]:
+        """Return custom yt-dlp options for this provider."""
+        return {}
 ```
 
 ## 5. Directory Structure

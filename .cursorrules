@@ -1,0 +1,64 @@
+# Mirrarr Project Rules
+
+## Project Overview
+A "Sonarr-like" personal video recorder (PVR) for Direct Download (DDL) content.
+The core philosophy is a modular "Provider" architecture with a lightweight, server-side rendered frontend.
+
+## Tech Stack
+-   **Language**: Python 3.14+
+-   **Web Framework**: FastAPI (Async)
+-   **Templating**: Jinja2 (Server-Side Rendering)
+-   **Interactivity**: HTMX (AJAX replacements, polling, no full reloads)
+-   **Styling**: TailwindCSS
+-   **Database**: SQLite (SQLModel)
+-   **Metadata**: TMDB API
+
+## Architecture Principles
+1.  **Hybrid Routes**:
+    -   UI Routes (`app/api/routes_ui.py`) return HTML (`templates.TemplateResponse`).
+    -   API Routes (`app/api/routes_api.py`) return JSON.
+2.  **No Full Reloads**: Use HTMX to swap parts of the page.
+    -   Example: Return partials like `partials/search_results.html` for search queries.
+3.  **Provider Isolation**: Core logic interacts with providers ONLY via `ProviderInterface`.
+4.  **Task Offloading**: Search and Download are background tasks. UI polls for updates.
+
+## Provider Interface (Contract)
+Providers must implement the `ProviderInterface` defined in `app/providers/base.py`.
+
+### Key Methods
+-   `name(self) -> str`: Unique provider name.
+-   `get_movie(self, movie: Movie) -> List[MovieResult]`: Search for movies.
+-   `get_series_episode(self, series: TVSeries, season: int, episode: int) -> List[EpisodeResult]`: Search for episodes.
+-   `get_yt_opts(self) -> dict[str, Any]`: Custom yt-dlp options (e.g., headers).
+
+### Data Models
+-   `DownloadResult`: Base model for results.
+    -   Fields: `title`, `quality`, `size`, `download_url`, `provider_name`, `source_site`, `filename` (original filename).
+-   `MovieResult`, `EpisodeResult`: Inherit from `DownloadResult`.
+
+### Common Base Classes
+-   `DirectoryListProvider` (`app/providers/directory_list_provider.py`): For providers that scrape directory listings. Implements caching and directory parsing logic.
+
+## Directory Structure
+-   `app/main.py`: Entry point (FastAPI app).
+-   `app/api/`: Route handlers (UI vs API).
+-   `app/providers/`: Provider implementations.
+-   `app/templates/`: Jinja2 templates.
+-   `app/static/`: Static assets (CSS, JS).
+-   `main.py`: Root scratch/test script (NOT the app entry point).
+
+## Coding Standards
+-   **HTMX**: Return HTML partials for AJAX requests, not JSON (except for API routes).
+-   **Error Handling**: UI routes should render error templates or toast notifications.
+-   **Type Hinting**: Use strict type hints (`typing`, `pydantic`).
+-   **Path Handling**: Use `pathlib.Path` for file system operations.
+
+## Workflow & Tooling
+-   **Package Management**: Use `uv` for all package management.
+    -   Always run commands with `uv run` (e.g., `uv run python main.py`).
+    -   Exception: `uv` commands themselves (e.g., `uv add`, `uv sync`).
+-   **Linting & Formatting**: Use `uvx ruff`.
+    -   Run `uvx ruff check .` and `uvx ruff format .`
+-   **Testing**: Use `pytest`.
+    -   Run `uv run pytest`.
+    -   **Verification**: All verify scripts must be written as `pytest` tests, not simple scripts.
