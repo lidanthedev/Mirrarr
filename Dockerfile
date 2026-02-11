@@ -30,9 +30,16 @@ RUN uv sync --frozen --no-dev
 # Place the virtual environment path in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Create directories for mounted volumes
-RUN mkdir -p /app/downloads /app/data
+RUN useradd -m -s /bin/bash mirarr
+
+# Copy the entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8000
+
+# We stay as ROOT so the entrypoint can run 'chown'
+# The script will drop privileges to 'mirarr' for us
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
