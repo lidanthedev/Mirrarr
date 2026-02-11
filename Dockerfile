@@ -30,12 +30,16 @@ RUN uv sync --frozen --no-dev
 # Place the virtual environment path in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Create a non-root user and switch to it
-RUN useradd -m -u 1000 mirarr && \
-    chown -R mirarr:mirarr /app
+RUN useradd -m -s /bin/bash mirarr
 
-USER mirarr
+# Copy the entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8000
+
+# We stay as ROOT so the entrypoint can run 'chown'
+# The script will drop privileges to 'mirarr' for us
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
