@@ -59,6 +59,33 @@ def test_select_best_result_all_exceed_limit():
 # Note: select_best_result uses a negative size tie-breaker to prefer smaller files.
 # This logic should be kept in sync with findBestFromResults in provider_modal.html
 # which also uses a subtraction (score = ... - r.sizeMb) for the same effect.
+def test_select_best_result_preferred_provider_case_insensitive():
+    """Test that preferred provider comparison is case-insensitive."""
+    results = [
+        MovieResult(title="M1", quality="1080p", size=2000, download_url="url1", source_site="S1", provider_name="P1"),
+        MovieResult(title="M2", quality="1080p", size=2000, download_url="url2", source_site="S2", provider_name="P2"),
+    ]
+    
+    with patch("app.services.search.get_settings") as mock_settings:
+        # Mock settings with lowercase "p2", should match "P2"
+        mock_settings.return_value = MagicMock(preferred_provider="p2", quality_limit="2160p")
+        best = select_best_result(results)
+        assert best.provider_name == "P2"
+
+def test_select_best_result_preferred_but_over_limit():
+    """Test that preferred provider is ignored if its quality exceeds the limit."""
+    results = [
+        MovieResult(title="M1", quality="2160p", size=5000, download_url="url1", source_site="S1", provider_name="preferred"),
+        MovieResult(title="M2", quality="1080p", size=2000, download_url="url2", source_site="S2", provider_name="other"),
+    ]
+    
+    with patch("app.services.search.get_settings") as mock_settings:
+        # Limit to 1080p, so the 2160p preferred result should be filtered out
+        mock_settings.return_value = MagicMock(preferred_provider="preferred", quality_limit="1080p")
+        best = select_best_result(results)
+        assert best.provider_name == "other"
+        assert best.quality == "1080p"
+
 def test_select_best_result_size_fallback():
     """Test that smaller size is preferred for same quality."""
     results = [

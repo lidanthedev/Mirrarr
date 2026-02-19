@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from typing import List, Union
 
 from app.providers import ProviderRegistry
 from app.providers.base import MovieResult, EpisodeResult
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def get_provider_results_for_movie(
     tmdb_id: int,
-) -> tuple[Movie, List[MovieResult]]:
+) -> tuple[Movie, list[MovieResult]]:
     """Get download links from all providers for a movie.
 
     First fetches the Movie from TMDB, then queries all providers concurrently.
@@ -44,7 +43,7 @@ async def get_provider_results_for_movie(
         *[fetch_from_provider(p) for p in providers]
     )
 
-    results: List[MovieResult] = []
+    results: list[MovieResult] = []
     for result_list in provider_results:
         results.extend(result_list)
 
@@ -55,7 +54,7 @@ async def get_provider_results_for_episode(
     tmdb_id: int,
     season: int,
     episode: int,
-) -> tuple[TVSeries, List[EpisodeResult]]:
+) -> tuple[TVSeries, list[EpisodeResult]]:
     """Get download links from all providers for a TV episode.
 
     First fetches the TVSeries from TMDB, then queries all providers concurrently.
@@ -88,7 +87,7 @@ async def get_provider_results_for_episode(
         *[fetch_from_provider(p) for p in providers]
     )
 
-    results: List[EpisodeResult] = []
+    results: list[EpisodeResult] = []
     for result_list in provider_results:
         results.extend(result_list)
 
@@ -98,7 +97,7 @@ async def get_provider_results_for_episode(
 async def get_single_provider_results_for_movie(
     tmdb_id: int,
     provider_name: str,
-) -> tuple[Movie, List[MovieResult]]:
+) -> tuple[Movie, list[MovieResult]]:
     """Get download links from a single provider for a movie.
 
     Returns:
@@ -107,7 +106,7 @@ async def get_single_provider_results_for_movie(
     settings = get_settings()
     timeout = settings.provider_timeout
     movie = await get_movie_details(tmdb_id)
-    results: List[MovieResult] = []
+    results: list[MovieResult] = []
 
     provider = ProviderRegistry.get(provider_name)
     if provider:
@@ -131,7 +130,7 @@ async def get_single_provider_results_for_episode(
     season: int,
     episode: int,
     provider_name: str,
-) -> tuple[TVSeries, List[EpisodeResult]]:
+) -> tuple[TVSeries, list[EpisodeResult]]:
     """Get download links from a single provider for a TV episode.
 
     Returns:
@@ -140,7 +139,7 @@ async def get_single_provider_results_for_episode(
     settings = get_settings()
     timeout = settings.provider_timeout
     series = await get_series_details(tmdb_id)
-    results: List[EpisodeResult] = []
+    results: list[EpisodeResult] = []
 
     provider = ProviderRegistry.get(provider_name)
     if provider:
@@ -164,7 +163,7 @@ async def get_single_provider_results_for_episode(
 def normalize_quality_score(quality_str: str | None) -> int:
     """Normalize quality string to an integer score.
     
-    4: 2160p/4k, 3: 1080p, 2: 720p, 1: else/480p.
+    4: 2160p/4k, 3: 1080p, 2: 720p, 1: 480p/else, 0: 360p/240p.
     """
     if not quality_str:
         return 1
@@ -176,12 +175,14 @@ def normalize_quality_score(quality_str: str | None) -> int:
         return 3
     if "720" in q:
         return 2
+    if "360" in q or "240" in q:
+        return 0
     return 1
 
 
 def select_best_result(
-    results: List[Union[MovieResult, EpisodeResult]],
-) -> Union[MovieResult, EpisodeResult, None]:
+    results: list[MovieResult | EpisodeResult],
+) -> MovieResult | EpisodeResult | None:
     """Select the best result: highest quality first, then smallest size.
 
     Priority:
@@ -207,8 +208,8 @@ def select_best_result(
     if not filtered_results:
         return None
 
-    def score(result: Union[MovieResult, EpisodeResult]) -> tuple[int, int, float]:
-        """Return (is_preferred, quality_score, -size_mb) for sorting.
+    def score(result: MovieResult | EpisodeResult) -> tuple[int, int, int]:
+        """Return (is_preferred, quality_score, -size) for sorting.
 
         Higher is_preferred is better.
         Higher quality score (up to limit) is better.

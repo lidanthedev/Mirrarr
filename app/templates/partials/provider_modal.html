@@ -112,8 +112,8 @@
                     if (q.includes('4K') || q.includes('2160')) return 4;
                     if (q.includes('1080')) return 3;
                     if (q.includes('720')) return 2;
-                    if (q.includes('480')) return 1;
-                    return 0;
+                    if (q.includes('360') || q.includes('240')) return 0;
+                    return 1;
                 }
 
                 function collectResults() {
