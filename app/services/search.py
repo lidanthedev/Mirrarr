@@ -161,6 +161,24 @@ async def get_single_provider_results_for_episode(
     return series, results
 
 
+def normalize_quality_score(quality_str: str | None) -> int:
+    """Normalize quality string to an integer score.
+    
+    4: 2160p/4k, 3: 1080p, 2: 720p, 1: else/480p.
+    """
+    if not quality_str:
+        return 1
+    
+    q = quality_str.lower()
+    if "2160" in q or "4k" in q:
+        return 4
+    if "1080" in q:
+        return 3
+    if "720" in q:
+        return 2
+    return 1
+
+
 def select_best_result(
     results: List[Union[MovieResult, EpisodeResult]],
 ) -> Union[MovieResult, EpisodeResult, None]:
@@ -175,33 +193,15 @@ def select_best_result(
         return None
 
     settings = get_settings()
-    pref_provider = settings.preferred_provider
+    pref_provider = settings.preferred_provider.lower() if settings.preferred_provider else None
     q_limit = settings.quality_limit.lower() if settings.quality_limit else "2160p"
 
-    quality_scores = {
-        "2160p": 4,
-        "4k": 4,
-        "1080p": 3,
-        "720p": 2,
-        "480p": 1,
-    }
-
-    limit_score = quality_scores.get(q_limit, 4)
+    limit_score = normalize_quality_score(q_limit)
 
     # Filter results by quality limit
     filtered_results = []
     for r in results:
-        quality = r.quality.lower() if r.quality else "480p"
-        if "2160" in quality or "4k" in quality:
-            res_score = 4
-        elif "1080" in quality:
-            res_score = 3
-        elif "720" in quality:
-            res_score = 2
-        else:
-            res_score = 1
-        
-        if res_score <= limit_score:
+        if normalize_quality_score(r.quality) <= limit_score:
             filtered_results.append(r)
 
     if not filtered_results:
@@ -214,18 +214,12 @@ def select_best_result(
         Higher quality score (up to limit) is better.
         Negative size means smaller files sort first when reversed.
         """
-        is_pref = 1 if pref_provider and result.provider_name == pref_provider else 0
+        is_pref = 0
+        if pref_provider and result.provider_name:
+            if result.provider_name.lower() == pref_provider:
+                is_pref = 1
 
-        # Extract quality string and normalize
-        quality = result.quality.lower() if result.quality else "480p"
-        if "2160" in quality or "4k" in quality:
-            q_score = 4
-        elif "1080" in quality:
-            q_score = 3
-        elif "720" in quality:
-            q_score = 2
-        else:
-            q_score = 1
+        q_score = normalize_quality_score(result.quality)
 
         return (is_pref, q_score, -result.size)
 

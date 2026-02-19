@@ -56,6 +56,9 @@ def test_select_best_result_all_exceed_limit():
         best = select_best_result(results)
         assert best is None
 
+# Note: select_best_result uses a negative size tie-breaker to prefer smaller files.
+# This logic should be kept in sync with findBestFromResults in provider_modal.html
+# which also uses a subtraction (score = ... - r.sizeMb) for the same effect.
 def test_select_best_result_size_fallback():
     """Test that smaller size is preferred for same quality."""
     results = [

@@ -16,6 +16,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    screens: {
+                        'xs': '480px',
+                    },
                     colors: {
                         primary: {
                             50: '#f0f9ff',
@@ -99,7 +102,7 @@
         </div>
 
         <!-- Mobile Menu -->
-        <div class="hidden md:hidden" id="mobile-menu">
+        <div class="hidden md:hidden" id="mobile-menu" aria-hidden="true">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-slate-700">
                 <a href="/"
                     class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
@@ -128,16 +131,21 @@
     <script>
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
+            const button = document.querySelector('[aria-controls="mobile-menu"]');
             const iconClosed = document.getElementById('mobile-menu-icon-closed');
             const iconOpen = document.getElementById('mobile-menu-icon-open');
             const isHidden = menu.classList.contains('hidden');
 
             if (isHidden) {
                 menu.classList.remove('hidden');
+                menu.setAttribute('aria-hidden', 'false');
+                button.setAttribute('aria-expanded', 'true');
                 iconClosed.classList.add('hidden');
                 iconOpen.classList.remove('hidden');
             } else {
                 menu.classList.add('hidden');
+                menu.setAttribute('aria-hidden', 'true');
+                button.setAttribute('aria-expanded', 'false');
                 iconClosed.classList.remove('hidden');
                 iconOpen.classList.add('hidden');
             }

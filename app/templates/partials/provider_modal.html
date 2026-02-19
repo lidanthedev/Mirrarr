@@ -125,7 +125,8 @@
                             sizeMb: parseFloat(item.dataset.sizeMb) || 0,
                             downloadUrl: item.dataset.downloadUrl || '',
                             source: item.dataset.source || '',
-                            filename: item.dataset.filename || ''
+                            filename: item.dataset.filename || '',
+                            providerName: item.dataset.providerName || ''
                         });
                     });
                     return results;
@@ -133,7 +134,7 @@
 
                 function findBestFromResults(results) {
                     var best = null;
-                    var bestScore = -1;
+                    var bestScore = -1e15; // Very small initial score
                     var limitScore = getQualityScore(qualityLimit);
 
                     results.forEach(function (r) {
@@ -141,11 +142,12 @@
                         // Skip if result exceeds quality limit
                         if (qScore > limitScore) return;
 
-                        var isPref = (preferredProvider && r.source === preferredProvider) ? 1 : 0;
+                        var isPref = (preferredProvider && r.providerName.toLowerCase() === preferredProvider.toLowerCase()) ? 1 : 0;
 
-                        // Score formula: Preferred (10M) + Quality (10k per level) + Size (as fraction)
-                        // This makes Preferred > Quality > Size
-                        var score = (isPref * 10000000) + (qScore * 10000) + r.sizeMb;
+                        // Score formula to replicate backend priority: isPref > qScore > smaller size
+                        // Using large weights to ensure strict priority
+                        // isPref: 10^12, qScore: 10^8, size: subtract up to ~10^6 MB
+                        var score = (isPref * 1000000000000) + (qScore * 100000000) - r.sizeMb;
                         if (score > bestScore) {
                             bestScore = score;
                             best = r;

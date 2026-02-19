@@ -10,7 +10,7 @@
 "episode": episode,
 "filename": best_result.filename or ""
 } %}
-{% button_class = "flex items-center justify-between w-full p-3 sm:p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25" %}
+{% set button_class = "flex items-center justify-between w-full p-3 sm:p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25" %}
 <button onclick="queueDownload({{ payload | tojson | forceescape }})"
     class="{{ button_class }}">
     <div class="flex items-center gap-2 sm:gap-3">
