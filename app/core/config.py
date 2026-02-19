@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     # Provider settings
     provider_timeout: int = 60  # Timeout for provider searches in seconds
+    preferred_provider: str | None = None  # Provider to prioritize in AUTO selection
+    quality_limit: str = "2160p"  # Maximum quality to consider in AUTO selection
 
     # App settings
     debug: bool = False

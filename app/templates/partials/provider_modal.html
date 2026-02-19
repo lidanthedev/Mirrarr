@@ -1,7 +1,8 @@
 <!-- Provider Selection Modal - Incremental Loading -->
 <div id="provider-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4"
     data-media-type="{{ media_type }}" data-tmdb-id="{{ tmdb_id }}" data-season="{{ season }}"
-    data-episode="{{ episode }}" data-provider-count="{{ provider_names | length }}">
+    data-episode="{{ episode }}" data-provider-count="{{ provider_names | length }}"
+    data-preferred-provider="{{ preferred_provider or '' }}" data-quality-limit="{{ quality_limit or '2160p' }}">
 
     <!-- Backdrop - clicking closes modal -->
     <div id="modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-pointer"></div>
@@ -87,6 +88,8 @@
                 var tmdbId = modal.dataset.tmdbId;
                 var season = modal.dataset.season;
                 var episode = modal.dataset.episode;
+                var preferredProvider = modal.dataset.preferredProvider;
+                var qualityLimit = modal.dataset.qualityLimit || '2160p';
 
                 var loadedProviders = 0;
                 var allLoaded = false;
@@ -131,9 +134,18 @@
                 function findBestFromResults(results) {
                     var best = null;
                     var bestScore = -1;
+                    var limitScore = getQualityScore(qualityLimit);
 
                     results.forEach(function (r) {
-                        var score = getQualityScore(r.quality) * 10000 + r.sizeMb;
+                        var qScore = getQualityScore(r.quality);
+                        // Skip if result exceeds quality limit
+                        if (qScore > limitScore) return;
+
+                        var isPref = (preferredProvider && r.source === preferredProvider) ? 1 : 0;
+
+                        // Score formula: Preferred (10M) + Quality (10k per level) + Size (as fraction)
+                        // This makes Preferred > Quality > Size
+                        var score = (isPref * 10000000) + (qScore * 10000) + r.sizeMb;
                         if (score > bestScore) {
                             bestScore = score;
                             best = r;

@@ -167,11 +167,16 @@ def select_best_result(
     """Select the best result: highest quality first, then smallest size.
 
     Priority:
-    1. Quality (2160p > 1080p > 720p > 480p)
-    2. Within same quality, prefer smaller file size
+    1. Preferred Provider (if configured and found)
+    2. Quality (Limit to max quality, 2160p > 1080p > 720p > 480p)
+    3. Within same quality, prefer smaller file size
     """
     if not results:
         return None
+
+    settings = get_settings()
+    pref_provider = settings.preferred_provider
+    q_limit = settings.quality_limit.lower() if settings.quality_limit else "2160p"
 
     quality_scores = {
         "2160p": 4,
@@ -181,16 +186,48 @@ def select_best_result(
         "480p": 1,
     }
 
-    def score(result: Union[MovieResult, EpisodeResult]) -> tuple[int, float]:
-        """Return (quality_score, -size_mb) for sorting.
+    limit_score = quality_scores.get(q_limit, 4)
 
-        Higher quality score is better.
+    # Filter results by quality limit
+    filtered_results = []
+    for r in results:
+        quality = r.quality.lower() if r.quality else "480p"
+        if "2160" in quality or "4k" in quality:
+            res_score = 4
+        elif "1080" in quality:
+            res_score = 3
+        elif "720" in quality:
+            res_score = 2
+        else:
+            res_score = 1
+        
+        if res_score <= limit_score:
+            filtered_results.append(r)
+
+    if not filtered_results:
+        return None
+
+    def score(result: Union[MovieResult, EpisodeResult]) -> tuple[int, int, float]:
+        """Return (is_preferred, quality_score, -size_mb) for sorting.
+
+        Higher is_preferred is better.
+        Higher quality score (up to limit) is better.
         Negative size means smaller files sort first when reversed.
         """
-        quality = result.quality.split()[0].lower() if result.quality else "480p"
-        q_score = quality_scores.get(quality, 0)
-        # Return tuple: (quality descending, size ascending)
-        return (q_score, -result.size)
+        is_pref = 1 if pref_provider and result.provider_name == pref_provider else 0
 
-    # Sort by quality (desc), then by size (asc via negative)
-    return max(results, key=score)
+        # Extract quality string and normalize
+        quality = result.quality.lower() if result.quality else "480p"
+        if "2160" in quality or "4k" in quality:
+            q_score = 4
+        elif "1080" in quality:
+            q_score = 3
+        elif "720" in quality:
+            q_score = 2
+        else:
+            q_score = 1
+
+        return (is_pref, q_score, -result.size)
+
+    # Sort and pick best from filtered results
+    return max(filtered_results, key=score)
