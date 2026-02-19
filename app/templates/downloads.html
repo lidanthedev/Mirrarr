@@ -5,16 +5,16 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1
-                class="text-3xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+                class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
                 Downloads
             </h1>
-            <p class="mt-1 text-slate-400">Monitor your active and completed downloads</p>
+            <p class="mt-1 text-slate-400 text-sm sm:text-base">Monitor your active and completed downloads</p>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-sm text-slate-500">Auto-refreshing every 2s</span>
+            <span class="text-xs sm:text-sm text-slate-500">Auto-refreshing every 2s</span>
             <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
         </div>
     </div>
