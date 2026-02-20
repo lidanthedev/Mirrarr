@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from typing import List, Union
 
 from app.providers import ProviderRegistry
 from app.providers.base import MovieResult, EpisodeResult
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def get_provider_results_for_movie(
     tmdb_id: int,
-) -> tuple[Movie, List[MovieResult]]:
+) -> tuple[Movie, list[MovieResult]]:
     """Get download links from all providers for a movie.
 
     First fetches the Movie from TMDB, then queries all providers concurrently.
@@ -44,7 +43,7 @@ async def get_provider_results_for_movie(
         *[fetch_from_provider(p) for p in providers]
     )
 
-    results: List[MovieResult] = []
+    results: list[MovieResult] = []
     for result_list in provider_results:
         results.extend(result_list)
 
@@ -55,7 +54,7 @@ async def get_provider_results_for_episode(
     tmdb_id: int,
     season: int,
     episode: int,
-) -> tuple[TVSeries, List[EpisodeResult]]:
+) -> tuple[TVSeries, list[EpisodeResult]]:
     """Get download links from all providers for a TV episode.
 
     First fetches the TVSeries from TMDB, then queries all providers concurrently.
@@ -88,7 +87,7 @@ async def get_provider_results_for_episode(
         *[fetch_from_provider(p) for p in providers]
     )
 
-    results: List[EpisodeResult] = []
+    results: list[EpisodeResult] = []
     for result_list in provider_results:
         results.extend(result_list)
 
@@ -98,7 +97,7 @@ async def get_provider_results_for_episode(
 async def get_single_provider_results_for_movie(
     tmdb_id: int,
     provider_name: str,
-) -> tuple[Movie, List[MovieResult]]:
+) -> tuple[Movie, list[MovieResult]]:
     """Get download links from a single provider for a movie.
 
     Returns:
@@ -107,7 +106,7 @@ async def get_single_provider_results_for_movie(
     settings = get_settings()
     timeout = settings.provider_timeout
     movie = await get_movie_details(tmdb_id)
-    results: List[MovieResult] = []
+    results: list[MovieResult] = []
 
     provider = ProviderRegistry.get(provider_name)
     if provider:
@@ -131,7 +130,7 @@ async def get_single_provider_results_for_episode(
     season: int,
     episode: int,
     provider_name: str,
-) -> tuple[TVSeries, List[EpisodeResult]]:
+) -> tuple[TVSeries, list[EpisodeResult]]:
     """Get download links from a single provider for a TV episode.
 
     Returns:
@@ -140,7 +139,7 @@ async def get_single_provider_results_for_episode(
     settings = get_settings()
     timeout = settings.provider_timeout
     series = await get_series_details(tmdb_id)
-    results: List[EpisodeResult] = []
+    results: list[EpisodeResult] = []
 
     provider = ProviderRegistry.get(provider_name)
     if provider:
@@ -161,36 +160,69 @@ async def get_single_provider_results_for_episode(
     return series, results
 
 
+def normalize_quality_score(quality_str: str | None) -> int:
+    """Normalize quality string to an integer score.
+    
+    4: 2160p/4k, 3: 1080p, 2: 720p, 1: 480p/else, 0: 360p/240p.
+    """
+    if not quality_str:
+        return 1
+    
+    q = quality_str.lower()
+    if "2160" in q or "4k" in q:
+        return 4
+    if "1080" in q:
+        return 3
+    if "720" in q:
+        return 2
+    if "360" in q or "240" in q:
+        return 0
+    return 1
+
+
 def select_best_result(
-    results: List[Union[MovieResult, EpisodeResult]],
-) -> Union[MovieResult, EpisodeResult, None]:
+    results: list[MovieResult | EpisodeResult],
+) -> MovieResult | EpisodeResult | None:
     """Select the best result: highest quality first, then smallest size.
 
     Priority:
-    1. Quality (2160p > 1080p > 720p > 480p)
-    2. Within same quality, prefer smaller file size
+    1. Preferred Provider (if configured and found)
+    2. Quality (Limit to max quality, 2160p > 1080p > 720p > 480p)
+    3. Within same quality, prefer smaller file size
     """
     if not results:
         return None
 
-    quality_scores = {
-        "2160p": 4,
-        "4k": 4,
-        "1080p": 3,
-        "720p": 2,
-        "480p": 1,
-    }
+    settings = get_settings()
+    pref_provider = settings.preferred_provider.lower() if settings.preferred_provider else None
+    q_limit = settings.quality_limit.lower() if settings.quality_limit else "2160p"
 
-    def score(result: Union[MovieResult, EpisodeResult]) -> tuple[int, float]:
-        """Return (quality_score, -size_mb) for sorting.
+    limit_score = normalize_quality_score(q_limit)
 
-        Higher quality score is better.
+    # Filter results by quality limit
+    filtered_results = []
+    for r in results:
+        if normalize_quality_score(r.quality) <= limit_score:
+            filtered_results.append(r)
+
+    if not filtered_results:
+        return None
+
+    def score(result: MovieResult | EpisodeResult) -> tuple[int, int, int]:
+        """Return (is_preferred, quality_score, -size) for sorting.
+
+        Higher is_preferred is better.
+        Higher quality score (up to limit) is better.
         Negative size means smaller files sort first when reversed.
         """
-        quality = result.quality.split()[0].lower() if result.quality else "480p"
-        q_score = quality_scores.get(quality, 0)
-        # Return tuple: (quality descending, size ascending)
-        return (q_score, -result.size)
+        is_pref = 0
+        if pref_provider and result.provider_name:
+            if result.provider_name.lower() == pref_provider:
+                is_pref = 1
 
-    # Sort by quality (desc), then by size (asc via negative)
-    return max(results, key=score)
+        q_score = normalize_quality_score(result.quality)
+
+        return (is_pref, q_score, -result.size)
+
+    # Sort and pick best from filtered results
+    return max(filtered_results, key=score)

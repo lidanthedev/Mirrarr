@@ -64,12 +64,12 @@
             </div>
 
             <!-- Title -->
-            <div class="p-3">
-                <h3 class="text-sm font-semibold text-white truncate" title="{{ result.title }}">
+            <div class="p-2 sm:p-3">
+                <h3 class="text-xs sm:text-sm font-semibold text-white truncate" title="{{ result.title }}">
                     {{ result.title }}
                 </h3>
                 {% if result.release_year %}
-                <p class="text-xs text-slate-400">{{ result.release_year }}</p>
+                <p class="text-[10px] sm:text-xs text-slate-400">{{ result.release_year }}</p>
                 {% endif %}
             </div>
         </div>

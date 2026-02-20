@@ -10,17 +10,18 @@
 "episode": episode,
 "filename": best_result.filename or ""
 } %}
+{% set button_class = "flex items-center justify-between w-full p-3 sm:p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25" %}
 <button onclick="queueDownload({{ payload | tojson | forceescape }})"
-    class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25">
-    <div class="flex items-center gap-3">
-        <div class="p-2 bg-white/20 rounded-lg">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    class="{{ button_class }}">
+    <div class="flex items-center gap-2 sm:gap-3">
+        <div class="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+            <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
         </div>
-        <div>
-            <p class="font-bold text-lg">AUTO - Best Quality</p>
-            <p class="text-sm text-white/80">{{ best_result.quality }} •
+        <div class="text-left">
+            <p class="font-bold text-base sm:text-lg">AUTO - Best Quality</p>
+            <p class="text-[10px] sm:text-sm text-white/80 line-clamp-1">{{ best_result.quality }} •
                 {% if best_result.size >= 1073741824 %}
                 {{ "%.1f"|format(best_result.size / 1073741824) }} GB
                 {% else %}
@@ -29,7 +30,7 @@
                 • {{ best_result.source_site }}</p>
         </div>
     </div>
-    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>

@@ -16,6 +16,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    screens: {
+                        'xs': '480px',
+                    },
                     colors: {
                         primary: {
                             50: '#f0f9ff',
@@ -44,7 +47,7 @@
 
 <body class="h-full bg-slate-900 text-slate-100">
     <!-- Navigation -->
-    <nav class="bg-slate-800 border-b border-slate-700 shadow-lg">
+    <nav class="bg-slate-800 border-b border-slate-700 shadow-lg sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
@@ -56,7 +59,8 @@
                         </span>
                     </a>
                 </div>
-                <div class="flex items-center space-x-4">
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-4">
                     <a href="/"
                         class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
                         Dashboard
@@ -78,9 +82,75 @@
                         Settings
                     </a>
                 </div>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button type="button" onclick="toggleMobileMenu()"
+                        class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 focus:outline-none transition-colors"
+                        aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <svg id="mobile-menu-icon-closed" class="block h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                        </svg>
+                        <svg id="mobile-menu-icon-open" class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div class="hidden md:hidden" id="mobile-menu" aria-hidden="true">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-slate-700">
+                <a href="/"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                    Dashboard
+                </a>
+                <a href="/movies"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                    Movies
+                </a>
+                <a href="/tv"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                    TV Shows
+                </a>
+                <a href="/downloads"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                    Downloads
+                </a>
+                <a href="#"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+                    Settings
+                </a>
             </div>
         </div>
     </nav>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const button = document.querySelector('[aria-controls="mobile-menu"]');
+            const iconClosed = document.getElementById('mobile-menu-icon-closed');
+            const iconOpen = document.getElementById('mobile-menu-icon-open');
+            const isHidden = menu.classList.contains('hidden');
+
+            if (isHidden) {
+                menu.classList.remove('hidden');
+                menu.setAttribute('aria-hidden', 'false');
+                button.setAttribute('aria-expanded', 'true');
+                iconClosed.classList.add('hidden');
+                iconOpen.classList.remove('hidden');
+            } else {
+                menu.classList.add('hidden');
+                menu.setAttribute('aria-hidden', 'true');
+                button.setAttribute('aria-expanded', 'false');
+                iconClosed.classList.remove('hidden');
+                iconOpen.classList.add('hidden');
+            }
+        }
+    </script>
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

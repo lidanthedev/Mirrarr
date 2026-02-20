@@ -24,6 +24,7 @@ from app.services.search import (
     get_single_provider_results_for_episode,
     select_best_result,
 )
+from app.core.config import get_settings
 from app.providers import ProviderRegistry
 from app.services.download_manager import manager
 
@@ -139,6 +140,7 @@ async def provider_modal(
 
     # Get list of all registered providers for loading skeletons
     provider_names = ProviderRegistry.names()
+    settings = get_settings()
 
     return templates.TemplateResponse(
         request=request,
@@ -152,6 +154,8 @@ async def provider_modal(
             "season": season,
             "episode": episode,
             "media": media,
+            "preferred_provider": settings.preferred_provider,
+            "quality_limit": settings.quality_limit,
         },
     )
 

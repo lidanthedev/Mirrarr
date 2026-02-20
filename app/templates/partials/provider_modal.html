@@ -1,73 +1,76 @@
 <!-- Provider Selection Modal - Incremental Loading -->
 <div id="provider-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4"
     data-media-type="{{ media_type }}" data-tmdb-id="{{ tmdb_id }}" data-season="{{ season }}"
-    data-episode="{{ episode }}" data-provider-count="{{ provider_names | length }}">
+    data-episode="{{ episode }}" data-provider-count="{{ provider_names | length }}"
+    data-preferred-provider="{{ preferred_provider or '' }}" data-quality-limit="{{ quality_limit or '2160p' }}">
 
     <!-- Backdrop - clicking closes modal -->
     <div id="modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-pointer"></div>
 
     <!-- Modal Content -->
     <div
-        class="relative bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden border border-slate-700">
+        class="relative bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-slate-700 flex flex-col">
         <!-- Header -->
-        <div class="flex items-start gap-4 p-6 border-b border-slate-700">
+        <div class="flex items-start gap-3 p-4 sm:p-6 border-b border-slate-700">
             {% if poster_url %}
-            <img src="{{ poster_url }}" alt="{{ title }}" class="w-24 h-36 object-cover rounded-lg shadow-lg">
+            <img src="{{ poster_url }}" alt="{{ title }}" class="w-16 h-24 sm:w-24 sm:h-36 object-cover rounded-lg shadow-lg">
             {% else %}
-            <div class="w-24 h-36 bg-slate-700 rounded-lg flex items-center justify-center">
-                <svg class="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-16 h-24 sm:w-24 sm:h-36 bg-slate-700 rounded-lg flex items-center justify-center">
+                <svg class="h-6 w-6 sm:h-8 sm:w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                 </svg>
             </div>
             {% endif %}
             <div class="flex-1 min-w-0">
-                <h2 class="text-xl font-bold text-white">{{ title }}</h2>
-                <p class="text-slate-400 text-sm mt-1">
+                <h2 class="text-lg sm:text-xl font-bold text-white leading-tight">{{ title }}</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mt-1">
                     {% if media_type == 'movie' %}Movie{% else %}TV Show - S{{ season }}E{{ episode }}{% endif %}
                 </p>
             </div>
             <!-- Close/Back Button -->
-            {% if media_type == 'tv' %}
-            <button hx-get="/series/{{ tmdb_id }}" hx-target="#modal-container" hx-swap="innerHTML"
-                class="text-slate-400 hover:text-white transition-colors" title="Back to episodes">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-            {% endif %}
-            <button id="modal-close-btn" class="text-slate-400 hover:text-white transition-colors" title="Close">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+            <div class="flex items-center gap-1">
+                {% if media_type == 'tv' %}
+                <button hx-get="/series/{{ tmdb_id }}" hx-target="#modal-container" hx-swap="innerHTML"
+                    class="p-1 text-slate-400 hover:text-white transition-colors" title="Back to episodes">
+                    <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                {% endif %}
+                <button id="modal-close-btn" class="p-1 text-slate-400 hover:text-white transition-colors" title="Close">
+                    <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- AUTO Button - Uses already-loaded provider results from DOM -->
-        <div class="p-4 bg-slate-900/50 border-b border-slate-700">
+        <div class="p-3 sm:p-4 bg-slate-900/50 border-b border-slate-700">
             <button id="auto-select-btn"
-                class="flex items-center justify-between w-full p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25 cursor-pointer">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-white/20 rounded-lg">
+                class="flex items-center justify-between w-full p-3 sm:p-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 rounded-xl text-white transition-all shadow-lg hover:shadow-primary-500/25 cursor-pointer">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="p-1.5 sm:p-2 bg-white/20 rounded-lg">
                         <!-- Normal lightning icon -->
-                        <svg id="auto-btn-icon" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg id="auto-btn-icon" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         <!-- Loading spinner (hidden by default) -->
-                        <svg id="auto-btn-spinner" class="h-6 w-6 animate-spin hidden" fill="none" stroke="currentColor"
+                        <svg id="auto-btn-spinner" class="h-5 w-5 sm:h-6 sm:w-6 animate-spin hidden" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" stroke-width="2" stroke-dasharray="31.4 31.4"
                                 stroke-linecap="round" />
                         </svg>
                     </div>
                     <div class="flex-1 min-w-0 text-left">
-                        <p class="font-bold text-lg">AUTO - Best Quality</p>
-                        <p id="auto-btn-status" class="text-sm text-white/80">Click to auto-select best download</p>
-                        <p id="auto-btn-filename" class="text-xs text-white/60 break-words hidden"></p>
+                        <p class="font-bold text-base sm:text-lg">AUTO - Best Quality</p>
+                        <p id="auto-btn-status" class="text-xs sm:text-sm text-white/80">Click to auto-select best download</p>
+                        <p id="auto-btn-filename" class="text-[10px] sm:text-xs text-white/60 break-words hidden"></p>
                     </div>
                 </div>
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
@@ -85,6 +88,8 @@
                 var tmdbId = modal.dataset.tmdbId;
                 var season = modal.dataset.season;
                 var episode = modal.dataset.episode;
+                var preferredProvider = modal.dataset.preferredProvider;
+                var qualityLimit = modal.dataset.qualityLimit || '2160p';
 
                 var loadedProviders = 0;
                 var allLoaded = false;
@@ -107,8 +112,8 @@
                     if (q.includes('4K') || q.includes('2160')) return 4;
                     if (q.includes('1080')) return 3;
                     if (q.includes('720')) return 2;
-                    if (q.includes('480')) return 1;
-                    return 0;
+                    if (q.includes('360') || q.includes('240')) return 0;
+                    return 1;
                 }
 
                 function collectResults() {
@@ -120,7 +125,8 @@
                             sizeMb: parseFloat(item.dataset.sizeMb) || 0,
                             downloadUrl: item.dataset.downloadUrl || '',
                             source: item.dataset.source || '',
-                            filename: item.dataset.filename || ''
+                            filename: item.dataset.filename || '',
+                            providerName: item.dataset.providerName || ''
                         });
                     });
                     return results;
@@ -128,10 +134,20 @@
 
                 function findBestFromResults(results) {
                     var best = null;
-                    var bestScore = -1;
+                    var bestScore = -1e15; // Very small initial score
+                    var limitScore = getQualityScore(qualityLimit);
 
                     results.forEach(function (r) {
-                        var score = getQualityScore(r.quality) * 10000 + r.sizeMb;
+                        var qScore = getQualityScore(r.quality);
+                        // Skip if result exceeds quality limit
+                        if (qScore > limitScore) return;
+
+                        var isPref = (preferredProvider && r.providerName.toLowerCase() === preferredProvider.toLowerCase()) ? 1 : 0;
+
+                        // Score formula to replicate backend priority: isPref > qScore > smaller size
+                        // Using large weights to ensure strict priority
+                        // isPref: 10^12, qScore: 10^8, size: subtract up to ~10^6 MB
+                        var score = (isPref * 1000000000000) + (qScore * 100000000) - r.sizeMb;
                         if (score > bestScore) {
                             bestScore = score;
                             best = r;
