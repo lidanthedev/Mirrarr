@@ -30,8 +30,8 @@
             data-quality="{{ result.quality }}" data-size-mb="{{ (result.size / 1048576)|round(2) }}"
             data-download-url="{{ result.download_url }}" data-source="{{ result.source_site }}"
             data-filename="{{ result.filename or '' }}" data-provider-name="{{ result.provider_name or '' }}">
-            <div class="p-1.5 bg-slate-600 rounded group-hover/item:bg-primary-600 transition-colors flex-shrink-0 hidden sm:block">
-                <svg class="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-300 group-hover/item:text-white transition-colors" fill="none"
+            <div class="p-1.5 bg-slate-600 rounded group-hover/item:bg-primary-600 transition-colors flex-shrink-0">
+                <svg class="h-3.5 w-3.5 text-slate-300 group-hover/item:text-white transition-colors" fill="none"
                     stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -40,12 +40,14 @@
             <div class="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-x-3">
                 <span class="font-bold text-white text-xs sm:text-sm flex-shrink-0">{{ result.quality }}</span>
                 {% if result.filename %}
-                <span class="text-[10px] sm:text-xs text-slate-400 truncate flex-1 min-w-0" title="{{ result.filename }}">
+                <span class="text-[10px] sm:text-xs text-slate-400 truncate flex-1 min-w-0"
+                    title="{{ result.filename }}">
                     {{ result.filename }}
                 </span>
                 {% endif %}
             </div>
-            <span class="text-[10px] sm:text-sm font-medium text-slate-300 flex-shrink-0 bg-slate-700/50 px-2 py-0.5 rounded">
+            <span
+                class="text-[10px] sm:text-sm font-medium text-slate-300 flex-shrink-0 bg-slate-700/50 px-2 py-0.5 rounded">
                 {% if result.size >= 1073741824 %}
                 {{ "%.1f"|format(result.size / 1073741824) }} GB
                 {% else %}

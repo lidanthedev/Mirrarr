@@ -374,9 +374,8 @@ class RiveSolver:
 
 
 class RiveStreamProvider(ProviderInterface):
-    """A dummy provider that returns fake download links.
-
-    Useful for testing the UI without real DDL sources.
+    """
+    RiveStream Provider for https://rivestream.org/
     """
 
     def __init__(self):
