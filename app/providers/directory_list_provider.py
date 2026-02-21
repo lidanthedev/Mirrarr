@@ -5,17 +5,10 @@ import re
 from abc import abstractmethod
 from typing import List, NamedTuple
 from cachetools import TTLCache
+from urllib3.util import Retry
 
 from app.models.media import Movie, TVSeries
 from app.providers.base import EpisodeResult, MovieResult, ProviderInterface
-from urllib3.util.retry import Retry
-
-retry_config = Retry(
-    total=5,
-    backoff_factor=5,
-    status_forcelist=[500, 502, 503, 504],
-    allowed_methods=["HEAD", "GET", "OPTIONS"],
-)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -73,6 +66,15 @@ class DirectoryListProvider(ProviderInterface):
     - _parse_directory_html: Parse HTML to extract FileEntry list
     """
 
+    def __init__(self):
+        retry_config = Retry(
+            total=5,
+            backoff_factor=5,
+            status_forcelist=[500, 502, 503, 504, 429],
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+        )
+        super().__init__(retry_config=retry_config)
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -116,14 +118,10 @@ class DirectoryListProvider(ProviderInterface):
         if target_url in cache:
             return cache[target_url]
 
-        import niquests
-
         headers = {"User-Agent": "Mozilla/5.0"}
 
         try:
-            response = await niquests.aget(
-                target_url, headers=headers, retries=retry_config
-            )
+            response = await self.session.get(target_url, headers=headers)
             response.raise_for_status()
             result = await self._parse_directory_html(response.text, target_url)
             cache[target_url] = result  # Cache the result, not the coroutine
