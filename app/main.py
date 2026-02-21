@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.routes_ui import router as ui_router
 from app.api.routes_api import router as api_router
+from app.core.auth import BasicAuthMiddleware
 from app.providers import register_provider
 from app.providers.a111477_provider import A111477Provider
 from app.providers.rivestream_provider import RiveStreamProvider
@@ -30,6 +31,9 @@ app = FastAPI(
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Add authentication middleware (only active when AUTH_USERNAME + AUTH_PASSWORD are set)
+app.add_middleware(BasicAuthMiddleware)
 
 # Initialize Jinja2 templates (shared across routers)
 templates = Jinja2Templates(directory=TEMPLATES_DIR)

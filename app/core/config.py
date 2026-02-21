@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     preferred_provider: str | None = None  # Provider to prioritize in AUTO selection
     quality_limit: Literal["2160p", "1080p", "720p", "480p", "360p", "240p"] = "2160p"  # Maximum quality to consider in AUTO selection
 
+    # Authentication (leave empty to disable)
+    auth_username: str = ""
+    auth_password: str = ""
+
     # App settings
     debug: bool = False
 
