@@ -5,7 +5,7 @@ import re
 from typing import Any, List, Optional
 from urllib.parse import unquote
 
-import niquests
+from aiolimiter import AsyncLimiter
 from cachetools import TTLCache
 from urllib3.util import Retry
 
@@ -38,12 +38,16 @@ class AcerMoviesProvider(ProviderInterface):
     def name(self) -> str:
         return "AcerMovies"
 
+    def __init__(self):
+        super().__init__()
+        self.rate_limiter = AsyncLimiter(5, 60.0)
+
     async def _post(self, endpoint: str, payload: dict) -> Any:
         """Helper to perform POST requests with retries."""
         url = f"{self.API_BASE_URL}/{endpoint}"
         try:
-            async with niquests.AsyncSession(retries=self.retry_config) as session:
-                response = await session.post(
+            async with self.rate_limiter:
+                response = await self.session.post(
                     url, json=payload, headers=self.DEFAULT_HEADERS, timeout=10
                 )
                 response.raise_for_status()
@@ -108,6 +112,34 @@ class AcerMoviesProvider(ProviderInterface):
             return unquote(source_url)
         return None
 
+    def _quality_rank(self, quality: str) -> int:
+        """Assign an integer rank to a quality string for sorting."""
+        q = quality.lower()
+        if "2160" in q or "4k" in q or "uhd" in q:
+            return 4000
+        if "1080" in q or "fhd" in q:
+            return 1080
+        if "720" in q or "hd" in q:
+            return 720
+        if "480" in q or "sd" in q:
+            return 480
+        if "360" in q:
+            return 360
+        return 0
+
+    def _extract_quality(self, text: str, default: str = "Unknown") -> str:
+        """Attempt to extract standard quality strings from text."""
+        text = text.lower()
+        if "2160p" in text or "4k" in text:
+            return "2160p"
+        if "1080p" in text or "1080" in text:
+            return "1080p"
+        if "720p" in text or "720" in text:
+            return "720p"
+        if "480p" in text or "480" in text:
+            return "480p"
+        return default
+
     async def get_movie(self, movie: Movie) -> List[MovieResult]:
         """Get download links for a movie."""
         search_results = await self._search(movie.title)
@@ -131,6 +163,11 @@ class AcerMoviesProvider(ProviderInterface):
                 continue
 
             qualities = await self._get_qualities(movie_url)
+            # Sort qualities by resolution descending
+            qualities.sort(
+                key=lambda x: self._quality_rank(x.get("quality", "")), reverse=True
+            )
+            qualities = qualities[:2]  # Limit to 2 best qualities
             for q in qualities:
                 quality_str = q.get("quality", "Unknown")
                 source_api_url = q.get("url")
@@ -249,12 +286,16 @@ class AcerMoviesProvider(ProviderInterface):
                         if not final_url:
                             continue
 
+                        # Extract quality from the container title if possible
+                        container_title = container.get("title", "")
+                        quality_str = self._extract_quality(container_title)
+
                         results.append(
                             EpisodeResult(
                                 title=f"{series.title} S{season:02d}E{episode:02d}",
                                 season=season,
                                 episode=episode,
-                                quality="Unknown",
+                                quality=quality_str,
                                 size=0,
                                 download_url=final_url,
                                 source_site=self.name,
@@ -266,4 +307,8 @@ class AcerMoviesProvider(ProviderInterface):
         return results
 
     def get_yt_opts(self) -> dict[str, Any]:
-        return {"http_headers": self.DEFAULT_HEADERS}
+        opts = super().get_yt_opts()
+        headers = opts.get("http_headers", {})
+        headers.update(self.DEFAULT_HEADERS)
+        opts["http_headers"] = headers
+        return opts

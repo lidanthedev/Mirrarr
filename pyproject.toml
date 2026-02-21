@@ -18,6 +18,7 @@ dependencies = [
     "yt-dlp>=2026.2.4",
     "yt-dlp-ejs>=0.4.0",
     "cachetools>=7.0.0",
+    "aiolimiter>=1.2.1",
 ]
 [tool.uv]
 override-dependencies = [

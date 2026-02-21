@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import niquests
 from app.core.config import get_settings
 from app.models.media import Movie, TVSeries
+from urllib3.util import Retry
 
 
 class DownloadResult(BaseModel):
@@ -44,7 +45,13 @@ class ProviderInterface(ABC):
 
     def __init__(self):
         settings = get_settings()
-        self.session = niquests.AsyncSession()
+        retry_config = Retry(
+            total=5,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
+        )
+        self.session = niquests.AsyncSession(retries=retry_config)
         if settings.proxy:
             self.session.proxies = {"http": settings.proxy, "https": settings.proxy}
 
