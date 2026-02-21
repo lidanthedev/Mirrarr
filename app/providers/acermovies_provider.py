@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, ClassVar, List, Optional
+from typing import Any, ClassVar
 from urllib.parse import unquote
 
 from aiolimiter import AsyncLimiter
@@ -28,16 +28,16 @@ class AcerMoviesProvider(ProviderInterface):
     def name(self) -> str:
         return "AcerMovies"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.rate_limiter = AsyncLimiter(5, 60.0)
-        self.cache = TTLCache(maxsize=100, ttl=1800)
+        self.rate_limiter: AsyncLimiter = AsyncLimiter(5, 60.0)
+        self.cache: TTLCache = TTLCache(maxsize=100, ttl=1800)
 
     def _sanitize_filename(self, name: str) -> str:
         """Strip invalid characters from filenames and trim whitespace."""
         return re.sub(r'[<>:"/\\|?*]', "", name).strip()
 
-    async def _post(self, endpoint: str, payload: dict) -> Any:
+    async def _post(self, endpoint: str, payload: dict[str, Any]) -> Any:
         """Helper to perform POST requests with retries."""
         url = f"{self.API_BASE_URL}/{endpoint}"
         try:
@@ -51,7 +51,7 @@ class AcerMoviesProvider(ProviderInterface):
             logger.exception(f"Error requesting {endpoint}")
             return {}
 
-    async def _search(self, query: str) -> List[dict]:
+    async def _search(self, query: str) -> list[dict]:
         """Search for content on AcerMovies."""
         cache_key = f"search_{query}"
         if cache_key in self.cache:
@@ -64,7 +64,7 @@ class AcerMoviesProvider(ProviderInterface):
             self.cache[cache_key] = results
         return results
 
-    async def _get_qualities(self, movie_url: str) -> List[dict]:
+    async def _get_qualities(self, movie_url: str) -> list[dict]:
         """Get available qualities for a movie."""
         cache_key = f"qualities:{movie_url}"
         if cache_key in self.cache:
@@ -76,7 +76,7 @@ class AcerMoviesProvider(ProviderInterface):
             self.cache[cache_key] = qualities
         return qualities
 
-    async def _get_episodes(self, episodes_api_url: str) -> List[dict]:
+    async def _get_episodes(self, episodes_api_url: str) -> list[dict]:
         """Get episodes or seasons given a URL."""
         cache_key = f"episodes:{episodes_api_url}"
         if cache_key in self.cache:
@@ -95,7 +95,7 @@ class AcerMoviesProvider(ProviderInterface):
 
     async def _get_source_url(
         self, source_api_url: str, series_type: str = "movie"
-    ) -> Optional[str]:
+    ) -> str | None:
         """Get the final direct download URL."""
         # Not caching final URLs as they might expire or be one-time tokens
         data = await self._post(
@@ -134,7 +134,7 @@ class AcerMoviesProvider(ProviderInterface):
             return "480p"
         return default
 
-    async def get_movie(self, movie: Movie) -> List[MovieResult]:
+    async def get_movie(self, movie: Movie) -> list[MovieResult]:
         """Get download links for a movie."""
         search_results = await self._search(movie.title)
         results = []
@@ -193,7 +193,7 @@ class AcerMoviesProvider(ProviderInterface):
         series: TVSeries,
         season: int,
         episode: int,
-    ) -> List[EpisodeResult]:
+    ) -> list[EpisodeResult]:
         """Get download links for a TV episode."""
         search_results = await self._search(series.title)
         results = []
@@ -268,12 +268,12 @@ class AcerMoviesProvider(ProviderInterface):
                         r"(?:episode|ep)\s*(\d+)", ep_title, re.IGNORECASE
                     )
                     if match:
-                        clean_title = match.group(1)
+                        ep_num_str = match.group(1)
                     else:
                         matches = re.findall(r"\d+", ep_title)
-                        clean_title = matches[-1] if matches else ""
+                        ep_num_str = matches[-1] if matches else ""
 
-                    if clean_title.isdigit() and int(clean_title) == episode:
+                    if ep_num_str.isdigit() and int(ep_num_str) == episode:
                         source_api_url = ep_data.get("link") or ep_data.get("url")
                         if not source_api_url:
                             continue

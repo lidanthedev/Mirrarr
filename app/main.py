@@ -15,6 +15,10 @@ from app.providers.rivestream_provider import RiveStreamProvider
 from app.providers.vadapav_provider import VadapavProvider
 from app.services.download_manager import download_manager_lifespan
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 # Paths
@@ -32,15 +36,12 @@ async def app_lifespan(app: FastAPI):
             yield
     finally:
         # Teardown providers
-        import logging
-
-        logger = logging.getLogger(__name__)
         for provider in ProviderRegistry.all():
             if hasattr(provider, "aclose"):
                 try:
                     await provider.aclose()
-                except Exception as e:
-                    logger.error(f"Error closing provider {provider.name}: {e}")
+                except Exception:
+                    logger.exception("Error closing provider %s", provider.name)
 
 
 # Initialize FastAPI with overarching lifespan
