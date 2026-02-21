@@ -1,5 +1,6 @@
 """Configuration management for Mirrarr."""
 
+from pydantic import PositiveInt
 from functools import lru_cache
 from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,9 +19,14 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # Provider settings
-    provider_timeout: int = 60  # Timeout for provider searches in seconds
+    provider_timeout: PositiveInt = 60  # Timeout for provider searches in seconds
     preferred_provider: str | None = None  # Provider to prioritize in AUTO selection
-    quality_limit: Literal["2160p", "1080p", "720p", "480p", "360p", "240p"] = "2160p"  # Maximum quality to consider in AUTO selection
+    quality_limit: Literal["2160p", "1080p", "720p", "480p", "360p", "240p"] = (
+        "2160p"  # Maximum quality to consider in AUTO selection
+    )
+
+    # Network settings
+    proxy: str | None = None
 
     # App settings
     debug: bool = False

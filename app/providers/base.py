@@ -5,6 +5,8 @@ from typing import Any, List
 
 from pydantic import BaseModel
 
+import niquests
+from app.core.config import get_settings
 from app.models.media import Movie, TVSeries
 
 
@@ -39,6 +41,12 @@ class ProviderInterface(ABC):
     with the Mirrarr provider system. Providers receive pre-fetched
     TMDB data via Movie/TVSeries objects - they do not query TMDB.
     """
+
+    def __init__(self):
+        settings = get_settings()
+        self.session = niquests.AsyncSession()
+        if settings.proxy:
+            self.session.proxies = {"http": settings.proxy, "https": settings.proxy}
 
     @property
     @abstractmethod
@@ -94,4 +102,8 @@ class ProviderInterface(ABC):
         Returns:
             A dict of yt-dlp options to merge with defaults.
         """
-        return {}
+        settings = get_settings()
+        opts = {}
+        if settings.proxy:
+            opts["proxy"] = settings.proxy
+        return opts

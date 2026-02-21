@@ -116,12 +116,10 @@ class DirectoryListProvider(ProviderInterface):
         if target_url in cache:
             return cache[target_url]
 
-        import niquests
-
         headers = {"User-Agent": "Mozilla/5.0"}
 
         try:
-            response = await niquests.aget(
+            response = await self.session.get(
                 target_url, headers=headers, retries=retry_config
             )
             response.raise_for_status()

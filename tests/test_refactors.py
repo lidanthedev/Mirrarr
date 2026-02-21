@@ -63,11 +63,9 @@ class TestRefactors(unittest.TestCase):
         }
         mock_response.raise_for_status = MagicMock()
 
-        # Use AsyncMock for aget
-        with patch(
-            "app.providers.rivestream_provider.niquests.aget", new_callable=AsyncMock
-        ) as mock_aget:
-            mock_aget.return_value = mock_response
+        # Use AsyncMock for session.get
+        with patch.object(provider.session, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
 
             # We need to run the async method
             loop = asyncio.new_event_loop()
