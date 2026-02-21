@@ -2,12 +2,11 @@
 
 import logging
 import re
-from typing import Any, List, Optional
+from typing import Any, ClassVar, List, Optional
 from urllib.parse import unquote
 
 from aiolimiter import AsyncLimiter
 from cachetools import TTLCache
-from urllib3.util import Retry
 
 from app.models.media import Movie, TVSeries
 from app.providers.base import EpisodeResult, MovieResult, ProviderInterface
@@ -21,18 +20,11 @@ class AcerMoviesProvider(ProviderInterface):
     """AcerMovies provider implementation."""
 
     API_BASE_URL = "https://api.acermovies.fun/api"
-    DEFAULT_HEADERS = {
+    DEFAULT_HEADERS: ClassVar[dict[str, str]] = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         "Referer": "https://acermovies.fun/",
         "Origin": "https://acermovies.fun",
     }
-
-    retry_config = Retry(
-        total=5,
-        backoff_factor=5,
-        status_forcelist=[500, 502, 503, 504, 429],
-        allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
-    )
 
     @property
     def name(self) -> str:
@@ -53,7 +45,7 @@ class AcerMoviesProvider(ProviderInterface):
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
-            logger.error(f"Error requesting {endpoint}: {e}")
+            logger.exception(f"Error requesting {endpoint}: {e}")
             return {}
 
     async def _search(self, query: str) -> List[dict]:
@@ -156,7 +148,7 @@ class AcerMoviesProvider(ProviderInterface):
                 and movie.release_year
                 and str(result_year) != str(movie.release_year)
             ):
-                pass
+                continue
 
             movie_url = result.get("url")
             if not movie_url:
@@ -216,7 +208,10 @@ class AcerMoviesProvider(ProviderInterface):
             # Get the top-level list (Seasons/Qualities containers)
             try:
                 containers = await self._get_episodes(episodes_api_url)
-            except Exception:
+            except Exception as e:
+                logger.exception(
+                    f"Error getting episodes for container {episodes_api_url}: {e}"
+                )
                 continue
 
             # Filter for likely season containers (Episode Links or Season X)
@@ -258,7 +253,10 @@ class AcerMoviesProvider(ProviderInterface):
 
                 try:
                     episodes_list = await self._get_episodes(ep_link)
-                except Exception:
+                except Exception as e:
+                    logger.exception(
+                        f"Error getting episode list from link {ep_link}: {e}"
+                    )
                     continue
 
                 for ep_data in episodes_list:

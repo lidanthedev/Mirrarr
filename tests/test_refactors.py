@@ -36,7 +36,7 @@ class TestRefactors(unittest.TestCase):
             status="",
         )
 
-        # Mock niquests response
+        # Mock provider.session.get to return desired response
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "data": {

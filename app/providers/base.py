@@ -45,6 +45,7 @@ class ProviderInterface(ABC):
 
     def __init__(self):
         settings = get_settings()
+        self._settings = settings
         retry_config = Retry(
             total=5,
             backoff_factor=1,
@@ -54,6 +55,11 @@ class ProviderInterface(ABC):
         self.session = niquests.AsyncSession(retries=retry_config)
         if settings.proxy:
             self.session.proxies = {"http": settings.proxy, "https": settings.proxy}
+
+    async def aclose(self) -> None:
+        """Properly close the internal HTTP session."""
+        if hasattr(self, "session") and self.session:
+            await self.session.close()
 
     @property
     @abstractmethod
@@ -107,10 +113,9 @@ class ProviderInterface(ABC):
             }
 
         Returns:
-            A dict of yt-dlp options to merge with defaults.
+            Dictionary of yt-dlp options
         """
-        settings = get_settings()
         opts = {}
-        if settings.proxy:
-            opts["proxy"] = settings.proxy
+        if self._settings.proxy:
+            opts["proxy"] = self._settings.proxy
         return opts

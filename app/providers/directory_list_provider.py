@@ -5,6 +5,8 @@ import re
 from abc import abstractmethod
 from typing import List, NamedTuple
 from cachetools import TTLCache
+import niquests
+from urllib3.util import Retry
 
 from app.models.media import Movie, TVSeries
 from app.providers.base import EpisodeResult, MovieResult, ProviderInterface
@@ -67,13 +69,11 @@ class DirectoryListProvider(ProviderInterface):
 
     def __init__(self):
         super().__init__()
-        import niquests
-        from urllib3.util import Retry
 
         retry_config = Retry(
             total=5,
             backoff_factor=5,
-            status_forcelist=[500, 502, 503, 504],
+            status_forcelist=[500, 502, 503, 504, 429],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
         )
         # Preserve proxy settings configured in base class

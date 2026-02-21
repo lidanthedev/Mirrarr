@@ -1,9 +1,10 @@
 """Configuration management for Mirrarr."""
 
-from pydantic import PositiveInt
+from pydantic import PositiveInt, field_validator
 from functools import lru_cache
 from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from urllib.parse import urlparse
 
 
 class Settings(BaseSettings):
@@ -26,7 +27,22 @@ class Settings(BaseSettings):
     )
 
     # Network settings
+    # Proxy configuration in the format http://host:port or socks5://host:port
     proxy: str | None = None
+
+    @field_validator("proxy")
+    def validate_proxy(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+
+        parsed = urlparse(v)
+        if parsed.scheme not in ("http", "https", "socks4", "socks5", "socks5h"):
+            raise ValueError(
+                "Proxy must be a valid URL with scheme http/https/socks4/socks5"
+            )
+        if not parsed.netloc:
+            raise ValueError("Proxy must have a host and port")
+        return v
 
     # App settings
     debug: bool = False

@@ -34,7 +34,7 @@ async def test_acermovies_get_movie():
 
     with patch.object(provider, "_post", new_callable=AsyncMock) as mock_post:
         # Define side effects based on args
-        async def side_effect(endpoint, payload):
+        async def side_effect(endpoint, _payload):
             if endpoint == "search":
                 return mock_search_data
             elif endpoint == "sourceQuality":
@@ -94,11 +94,11 @@ async def test_acermovies_get_series_episode():
 
     with patch.object(provider, "_post", new_callable=AsyncMock) as mock_post:
 
-        async def side_effect(endpoint, payload):
+        async def side_effect(endpoint, _payload):
             if endpoint == "search":
                 return mock_search_data
             elif endpoint == "sourceEpisodes":
-                p_url = payload.get("url")
+                p_url = _payload.get("url")
                 if p_url == "http://mock/show":
                     return mock_episodes_level_1
                 elif p_url == "http://mock/s1":
@@ -128,7 +128,7 @@ async def test_acermovies_search_no_results():
 
     with patch.object(provider, "_post", new_callable=AsyncMock) as mock_post:
 
-        async def side_effect(endpoint, payload):
+        async def side_effect(endpoint, _payload):
             if endpoint == "search":
                 return {"searchResult": []}
             return {}
