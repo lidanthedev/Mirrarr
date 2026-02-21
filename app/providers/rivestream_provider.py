@@ -552,6 +552,7 @@ class RiveStreamProvider(ProviderInterface):
                 service,
                 exc,
                 resp_text,
+                exc_info=exc,
             )
             return []
 
