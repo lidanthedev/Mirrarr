@@ -37,7 +37,7 @@ class AcerMoviesProvider(ProviderInterface):
         """Strip invalid characters from filenames and trim whitespace."""
         return re.sub(r'[<>:"/\\|?*]', "", name).strip()
 
-    async def _post(self, endpoint: str, payload: dict[str, Any]) -> Any:
+    async def _post(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Helper to perform POST requests with retries."""
         url = f"{self.API_BASE_URL}/{endpoint}"
         try:
@@ -48,10 +48,10 @@ class AcerMoviesProvider(ProviderInterface):
                 response.raise_for_status()
                 return response.json()
         except Exception:
-            logger.exception(f"Error requesting {endpoint}")
+            logger.exception("Error requesting %s", endpoint)
             return {}
 
-    async def _search(self, query: str) -> list[dict]:
+    async def _search(self, query: str) -> list[dict[str, Any]]:
         """Search for content on AcerMovies."""
         cache_key = f"search_{query}"
         if cache_key in self.cache:
@@ -64,7 +64,7 @@ class AcerMoviesProvider(ProviderInterface):
             self.cache[cache_key] = results
         return results
 
-    async def _get_qualities(self, movie_url: str) -> list[dict]:
+    async def _get_qualities(self, movie_url: str) -> list[dict[str, Any]]:
         """Get available qualities for a movie."""
         cache_key = f"qualities:{movie_url}"
         if cache_key in self.cache:
@@ -76,7 +76,7 @@ class AcerMoviesProvider(ProviderInterface):
             self.cache[cache_key] = qualities
         return qualities
 
-    async def _get_episodes(self, episodes_api_url: str) -> list[dict]:
+    async def _get_episodes(self, episodes_api_url: str) -> list[dict[str, Any]]:
         """Get episodes or seasons given a URL."""
         cache_key = f"episodes:{episodes_api_url}"
         if cache_key in self.cache:
@@ -86,7 +86,7 @@ class AcerMoviesProvider(ProviderInterface):
         episodes = data.get("sourceEpisodes", [])
 
         if not isinstance(episodes, list):
-            logger.warning(f"Expected list for episodes, got {type(episodes)}")
+            logger.warning("Expected list for episodes, got %s", type(episodes))
             return []
 
         if episodes:
@@ -212,7 +212,7 @@ class AcerMoviesProvider(ProviderInterface):
                 containers = await self._get_episodes(episodes_api_url)
             except Exception:
                 logger.exception(
-                    f"Error getting episodes for container {episodes_api_url}"
+                    "Error getting episodes for container %s", episodes_api_url
                 )
                 continue
 
@@ -258,7 +258,7 @@ class AcerMoviesProvider(ProviderInterface):
                 try:
                     episodes_list = await self._get_episodes(ep_link)
                 except Exception:
-                    logger.exception(f"Error getting episode list from link {ep_link}")
+                    logger.exception("Error getting episode list from link %s", ep_link)
                     continue
 
                 for ep_data in episodes_list:
