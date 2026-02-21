@@ -1,3 +1,4 @@
+from app.providers.acermovies_provider import AcerMoviesProvider
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -38,6 +39,7 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 register_provider(VadapavProvider())
 register_provider(A111477Provider())
 register_provider(RiveStreamProvider())
+register_provider(AcerMoviesProvider())
 
 # Include routers
 app.include_router(ui_router)
