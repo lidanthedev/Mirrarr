@@ -26,14 +26,15 @@ STATIC_DIR = BASE_DIR / "static"
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
     """Application lifespan context manager."""
-    # Setup download manager
-    async with download_manager_lifespan(app):
-        yield
-
-    # Teardown providers
-    for provider in ProviderRegistry.all():
-        if hasattr(provider, "aclose"):
-            await provider.aclose()
+    try:
+        # Setup download manager
+        async with download_manager_lifespan(app):
+            yield
+    finally:
+        # Teardown providers
+        for provider in ProviderRegistry.all():
+            if hasattr(provider, "aclose"):
+                await provider.aclose()
 
 
 # Initialize FastAPI with overarching lifespan

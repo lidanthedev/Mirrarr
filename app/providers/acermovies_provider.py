@@ -208,9 +208,9 @@ class AcerMoviesProvider(ProviderInterface):
             # Get the top-level list (Seasons/Qualities containers)
             try:
                 containers = await self._get_episodes(episodes_api_url)
-            except Exception as e:
+            except Exception:
                 logger.exception(
-                    f"Error getting episodes for container {episodes_api_url}: {e}"
+                    f"Error getting episodes for container {episodes_api_url}"
                 )
                 continue
 
@@ -228,22 +228,24 @@ class AcerMoviesProvider(ProviderInterface):
             if not season_containers:
                 continue
 
-            # Calculate indices based on assumption: list is blocked by Quality, repeating Seasons.
-            num_seasons = series.number_of_seasons or 1
-            if num_seasons < 1:
-                num_seasons = 1
-
-            if len(season_containers) < season:
-                # Should not happen if data is consistent, but might if Seasons are missing.
-                # Just ignore check? Or fallback to linear scan?
-                # Let's try indices anyway.
-                pass
-
             indices_to_check = []
-            curr_idx = season - 1
-            while curr_idx < len(season_containers):
-                indices_to_check.append(curr_idx)
-                curr_idx += num_seasons
+            season_str_1 = f"season {season}"
+            season_str_2 = f"s{season:02d}"
+
+            for idx, c in enumerate(season_containers):
+                c_title = c.get("title", "").lower()
+                if season_str_1 in c_title or season_str_2 in c_title:
+                    indices_to_check.append(idx)
+
+            # Fallback to original arithmetic indexing if no title matches
+            if not indices_to_check:
+                num_seasons = series.number_of_seasons or 1
+                if num_seasons < 1:
+                    num_seasons = 1
+                curr_idx = season - 1
+                while curr_idx < len(season_containers):
+                    indices_to_check.append(curr_idx)
+                    curr_idx += num_seasons
 
             for idx in indices_to_check:
                 container = season_containers[idx]
@@ -253,10 +255,8 @@ class AcerMoviesProvider(ProviderInterface):
 
                 try:
                     episodes_list = await self._get_episodes(ep_link)
-                except Exception as e:
-                    logger.exception(
-                        f"Error getting episode list from link {ep_link}: {e}"
-                    )
+                except Exception:
+                    logger.exception(f"Error getting episode list from link {ep_link}")
                     continue
 
                 for ep_data in episodes_list:

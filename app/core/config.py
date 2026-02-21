@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     proxy: str | None = None
 
     @field_validator("proxy")
+    @classmethod
     def validate_proxy(cls, v: str | None) -> str | None:
         if v is None:
             return v
@@ -38,7 +39,7 @@ class Settings(BaseSettings):
         parsed = urlparse(v)
         if parsed.scheme not in ("http", "https", "socks4", "socks5", "socks5h"):
             raise ValueError(
-                "Proxy must be a valid URL with scheme http/https/socks4/socks5"
+                "Proxy must be a valid URL with scheme http/https/socks4/socks5/socks5h"
             )
         if not parsed.netloc:
             raise ValueError("Proxy must have a host and port")

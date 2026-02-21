@@ -43,15 +43,16 @@ class ProviderInterface(ABC):
     TMDB data via Movie/TVSeries objects - they do not query TMDB.
     """
 
-    def __init__(self):
+    def __init__(self, retry_config: Retry | None = None):
         settings = get_settings()
         self._settings = settings
-        retry_config = Retry(
-            total=5,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
-        )
+        if retry_config is None:
+            retry_config = Retry(
+                total=5,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
+            )
         self.session = niquests.AsyncSession(retries=retry_config)
         if settings.proxy:
             self.session.proxies = {"http": settings.proxy, "https": settings.proxy}

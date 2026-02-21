@@ -5,7 +5,6 @@ import re
 from abc import abstractmethod
 from typing import List, NamedTuple
 from cachetools import TTLCache
-import niquests
 from urllib3.util import Retry
 
 from app.models.media import Movie, TVSeries
@@ -68,18 +67,13 @@ class DirectoryListProvider(ProviderInterface):
     """
 
     def __init__(self):
-        super().__init__()
-
         retry_config = Retry(
             total=5,
             backoff_factor=5,
             status_forcelist=[500, 502, 503, 504, 429],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
         )
-        # Preserve proxy settings configured in base class
-        existing_proxies = self.session.proxies
-        self.session = niquests.AsyncSession(retries=retry_config)
-        self.session.proxies = existing_proxies
+        super().__init__(retry_config=retry_config)
 
     @property
     @abstractmethod
