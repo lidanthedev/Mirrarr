@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from typing import Literal
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,7 +25,7 @@ class Settings(BaseSettings):
 
     # Authentication (leave empty to disable)
     auth_username: str = ""
-    auth_password: str = ""
+    auth_password: SecretStr = SecretStr("")
 
     # App settings
     debug: bool = False

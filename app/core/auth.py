@@ -4,7 +4,9 @@ Enabled only when AUTH_USERNAME and AUTH_PASSWORD env vars are both set.
 When disabled (default), all requests pass through without auth.
 """
 
+import base64
 import secrets
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response as StarletteResponse
@@ -39,16 +41,14 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
             if scheme.lower() != "basic":
                 return self._unauthorized()
 
-            import base64
-
             decoded = base64.b64decode(credentials).decode("utf-8")
             username, password = decoded.split(":", 1)
-        except (ValueError, UnicodeDecodeError, Exception):
+        except ValueError:
             return self._unauthorized()
 
         # Constant-time comparison to prevent timing attacks
         username_ok = secrets.compare_digest(username, settings.auth_username)
-        password_ok = secrets.compare_digest(password, settings.auth_password)
+        password_ok = secrets.compare_digest(password, settings.auth_password.get_secret_value())
 
         if not (username_ok and password_ok):
             return self._unauthorized()
