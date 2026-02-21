@@ -13,8 +13,6 @@ from app.providers.base import EpisodeResult, MovieResult, ProviderInterface
 
 logger = logging.getLogger(__name__)
 
-cache = TTLCache(maxsize=100, ttl=1800)
-
 
 class AcerMoviesProvider(ProviderInterface):
     """AcerMovies provider implementation."""
@@ -33,6 +31,11 @@ class AcerMoviesProvider(ProviderInterface):
     def __init__(self):
         super().__init__()
         self.rate_limiter = AsyncLimiter(5, 60.0)
+        self.cache = TTLCache(maxsize=100, ttl=1800)
+
+    def _sanitize_filename(self, name: str) -> str:
+        """Strip invalid characters from filenames and trim whitespace."""
+        return re.sub(r'[<>:"/\\|?*]', "", name).strip()
 
     async def _post(self, endpoint: str, payload: dict) -> Any:
         """Helper to perform POST requests with retries."""
@@ -44,41 +47,40 @@ class AcerMoviesProvider(ProviderInterface):
                 )
                 response.raise_for_status()
                 return response.json()
-        except Exception as e:
-            logger.exception(f"Error requesting {endpoint}: {e}")
+        except Exception:
+            logger.exception(f"Error requesting {endpoint}")
             return {}
 
     async def _search(self, query: str) -> List[dict]:
         """Search for content on AcerMovies."""
         cache_key = f"search_{query}"
-        if cache_key in cache:
-            return cache[cache_key]
+        if cache_key in self.cache:
+            return self.cache[cache_key]
 
         data = await self._post("search", {"searchQuery": query})
         results = data.get("searchResult", [])
 
         if results:
-            cache[cache_key] = results
+            self.cache[cache_key] = results
         return results
 
     async def _get_qualities(self, movie_url: str) -> List[dict]:
-        """Get available qualities for a movie source."""
-        cache_key = f"qualities_{movie_url}"
-        if cache_key in cache:
-            return cache[cache_key]
+        """Get available qualities for a movie."""
+        cache_key = f"qualities:{movie_url}"
+        if cache_key in self.cache:
+            return self.cache[cache_key]
 
         data = await self._post("sourceQuality", {"url": movie_url})
-        results = data.get("sourceQualityList", [])
-
-        if results:
-            cache[cache_key] = results
-        return results
+        qualities = data.get("sourceQualityList", [])
+        if qualities:
+            self.cache[cache_key] = qualities
+        return qualities
 
     async def _get_episodes(self, episodes_api_url: str) -> List[dict]:
-        """Get available episodes for a series source."""
-        cache_key = f"episodes_{episodes_api_url}"
-        if cache_key in cache:
-            return cache[cache_key]
+        """Get episodes or seasons given a URL."""
+        cache_key = f"episodes:{episodes_api_url}"
+        if cache_key in self.cache:
+            return self.cache[cache_key]
 
         data = await self._post("sourceEpisodes", {"url": episodes_api_url})
         episodes = data.get("sourceEpisodes", [])
@@ -88,7 +90,7 @@ class AcerMoviesProvider(ProviderInterface):
             return []
 
         if episodes:
-            cache[cache_key] = episodes
+            self.cache[cache_key] = episodes
         return episodes
 
     async def _get_source_url(
@@ -111,7 +113,7 @@ class AcerMoviesProvider(ProviderInterface):
             return 4000
         if "1080" in q or "fhd" in q:
             return 1080
-        if "720" in q or "hd" in q:
+        if "720" in q or re.search(r"\bhd\b", q):
             return 720
         if "480" in q or "sd" in q:
             return 480
@@ -180,7 +182,7 @@ class AcerMoviesProvider(ProviderInterface):
                         download_url=final_url,
                         source_site=self.name,
                         provider_name=self.name,
-                        filename=f"{movie.title} - {quality_str}.mp4",
+                        filename=f"{self._sanitize_filename(movie.title)} - {quality_str}.mp4",
                     )
                 )
 
@@ -261,17 +263,15 @@ class AcerMoviesProvider(ProviderInterface):
 
                 for ep_data in episodes_list:
                     ep_title = ep_data.get("title", "")
-                    clean_title = (
-                        ep_title.lower()
-                        .replace("episode", "")
-                        .replace("ep", "")
-                        .strip()
-                    )
 
-                    if not clean_title.isdigit():
-                        match = re.search(r"\d+", clean_title)
-                        if match:
-                            clean_title = match.group(0)
+                    match = re.search(
+                        r"(?:episode|ep)\s*(\d+)", ep_title, re.IGNORECASE
+                    )
+                    if match:
+                        clean_title = match.group(1)
+                    else:
+                        matches = re.findall(r"\d+", ep_title)
+                        clean_title = matches[-1] if matches else ""
 
                     if clean_title.isdigit() and int(clean_title) == episode:
                         source_api_url = ep_data.get("link") or ep_data.get("url")
@@ -298,7 +298,7 @@ class AcerMoviesProvider(ProviderInterface):
                                 download_url=final_url,
                                 source_site=self.name,
                                 provider_name=self.name,
-                                filename=f"{series.title}.S{season:02d}E{episode:02d}.mp4",
+                                filename=f"{self._sanitize_filename(series.title)}.S{season:02d}E{episode:02d}.mp4",
                             )
                         )
 

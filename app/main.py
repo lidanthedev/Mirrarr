@@ -32,9 +32,15 @@ async def app_lifespan(app: FastAPI):
             yield
     finally:
         # Teardown providers
+        import logging
+
+        logger = logging.getLogger(__name__)
         for provider in ProviderRegistry.all():
             if hasattr(provider, "aclose"):
-                await provider.aclose()
+                try:
+                    await provider.aclose()
+                except Exception as e:
+                    logger.error(f"Error closing provider {provider.name}: {e}")
 
 
 # Initialize FastAPI with overarching lifespan
