@@ -41,7 +41,7 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
             if scheme.lower() != "basic":
                 return self._unauthorized()
 
-            decoded = base64.b64decode(credentials).decode("utf-8")
+            decoded = base64.b64decode(credentials, validate=True).decode("utf-8")
             username, password = decoded.split(":", 1)
         except ValueError:
             return self._unauthorized()
