@@ -7,9 +7,9 @@ When disabled (default), all requests pass through without auth.
 import base64
 import secrets
 
-from fastapi import Request, Response
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import Response as StarletteResponse
+from starlette.responses import Response
 
 from app.core.config import get_settings
 
@@ -46,9 +46,15 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
         except ValueError:
             return self._unauthorized()
 
-        # Constant-time comparison to prevent timing attacks
-        username_ok = secrets.compare_digest(username, settings.auth_username)
-        password_ok = secrets.compare_digest(password, settings.auth_password.get_secret_value())
+        # Constant-time comparison to prevent timing attacks (using bytes)
+        username_ok = secrets.compare_digest(
+            username.encode("utf-8"),
+            settings.auth_username.encode("utf-8"),
+        )
+        password_ok = secrets.compare_digest(
+            password.encode("utf-8"),
+            settings.auth_password.get_secret_value().encode("utf-8"),
+        )
 
         if not (username_ok and password_ok):
             return self._unauthorized()
@@ -56,8 +62,8 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     @staticmethod
-    def _unauthorized() -> StarletteResponse:
-        return StarletteResponse(
+    def _unauthorized() -> Response:
+        return Response(
             content="Unauthorized",
             status_code=401,
             headers={"WWW-Authenticate": 'Basic realm="Mirrarr"'},
