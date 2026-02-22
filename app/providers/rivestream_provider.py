@@ -379,6 +379,7 @@ class RiveStreamProvider(ProviderInterface):
     """
 
     def __init__(self):
+        super().__init__()
         self.rive_solver = RiveSolver()
 
     @property
@@ -397,7 +398,7 @@ class RiveStreamProvider(ProviderInterface):
             return cache["services"]
 
         try:
-            response: Response = await niquests.aget(
+            response: Response = await self.session.get(
                 "https://rivestream.org/api/backendfetch",
                 params={
                     "requestID": "VideoProviderServices",
@@ -448,7 +449,7 @@ class RiveStreamProvider(ProviderInterface):
         }
 
         try:
-            response: Response = await niquests.aget(
+            response: Response = await self.session.get(
                 "https://rivestream.org/api/backendfetch",
                 params=params,
                 timeout=RIVESTREAM_TIMEOUT,
@@ -538,7 +539,7 @@ class RiveStreamProvider(ProviderInterface):
         }
         response = None
         try:
-            response = await niquests.aget(
+            response = await self.session.get(
                 "https://rivestream.org/api/backendfetch",
                 params=params,
                 timeout=RIVESTREAM_TIMEOUT,
@@ -552,6 +553,7 @@ class RiveStreamProvider(ProviderInterface):
                 service,
                 exc,
                 resp_text,
+                exc_info=exc,
             )
             return []
 
@@ -621,10 +623,14 @@ class RiveStreamProvider(ProviderInterface):
         return await self.get_series_episode_from_all_services(series, season, episode)
 
     def get_yt_opts(self) -> dict[str, Any]:
-        return {
-            "http_headers": {
+        opts = super().get_yt_opts()
+        headers = opts.get("http_headers", {})
+        headers.update(
+            {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
                 "Referer": "https://rivestream.org/",
                 "Accept-Language": "en-US,en;q=0.9",
             }
-        }
+        )
+        opts["http_headers"] = headers
+        return opts

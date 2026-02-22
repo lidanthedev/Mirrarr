@@ -5,7 +5,10 @@ from typing import Any, List
 
 from pydantic import BaseModel
 
+import niquests
+from app.core.config import get_settings
 from app.models.media import Movie, TVSeries
+from urllib3.util import Retry
 
 
 class DownloadResult(BaseModel):
@@ -39,6 +42,25 @@ class ProviderInterface(ABC):
     with the Mirrarr provider system. Providers receive pre-fetched
     TMDB data via Movie/TVSeries objects - they do not query TMDB.
     """
+
+    def __init__(self, retry_config: Retry | None = None):
+        settings = get_settings()
+        self._settings = settings
+        if retry_config is None:
+            retry_config = Retry(
+                total=5,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
+            )
+        self.session = niquests.AsyncSession(retries=retry_config)
+        if settings.proxy:
+            self.session.proxies = {"http": settings.proxy, "https": settings.proxy}
+
+    async def aclose(self) -> None:
+        """Properly close the internal HTTP session."""
+        if hasattr(self, "session") and self.session:
+            await self.session.close()
 
     @property
     @abstractmethod
@@ -92,6 +114,9 @@ class ProviderInterface(ABC):
             }
 
         Returns:
-            A dict of yt-dlp options to merge with defaults.
+            Dictionary of yt-dlp options
         """
-        return {}
+        opts = {}
+        if self._settings.proxy:
+            opts["proxy"] = self._settings.proxy
+        return opts

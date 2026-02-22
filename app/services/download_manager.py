@@ -110,6 +110,7 @@ class DownloadManager:
         self.default_opts: dict[str, Any] = {
             "outtmpl": "downloads/%(title)s.%(ext)s",
             "restrictfilenames": True,
+            "trim_file_name": 200,  # Prevent [Errno 36] File name too long
             "retries": 20,
             "fragment_retries": 20,
             "skip_unavailable_fragments": False,

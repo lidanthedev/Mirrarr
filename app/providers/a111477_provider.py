@@ -71,4 +71,6 @@ class A111477Provider(DirectoryListProvider):
         return results
 
     def get_yt_opts(self) -> dict[str, Any]:
-        return {"concurrent_fragment_downloads": 10}
+        opts = super().get_yt_opts()
+        opts["concurrent_fragment_downloads"] = 10
+        return opts

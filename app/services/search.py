@@ -162,12 +162,12 @@ async def get_single_provider_results_for_episode(
 
 def normalize_quality_score(quality_str: str | None) -> int:
     """Normalize quality string to an integer score.
-    
+
     4: 2160p/4k, 3: 1080p, 2: 720p, 1: 480p/else, 0: 360p/240p.
     """
     if not quality_str:
         return 1
-    
+
     q = quality_str.lower()
     if "2160" in q or "4k" in q:
         return 4
@@ -194,7 +194,9 @@ def select_best_result(
         return None
 
     settings = get_settings()
-    pref_provider = settings.preferred_provider.lower() if settings.preferred_provider else None
+    pref_provider = (
+        settings.preferred_provider.lower() if settings.preferred_provider else None
+    )
     q_limit = settings.quality_limit.lower() if settings.quality_limit else "2160p"
 
     limit_score = normalize_quality_score(q_limit)
