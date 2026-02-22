@@ -3,6 +3,7 @@
 from pydantic import PositiveInt, field_validator
 from functools import lru_cache
 from typing import Literal
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from urllib.parse import urlparse
 
@@ -44,6 +45,10 @@ class Settings(BaseSettings):
         if not parsed.netloc:
             raise ValueError("Proxy must have a host and port")
         return v
+
+    # Authentication (leave empty to disable)
+    auth_username: str = ""
+    auth_password: SecretStr = SecretStr("")
 
     # App settings
     debug: bool = False
