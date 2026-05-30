@@ -375,7 +375,7 @@ class RiveSolver:
 
 class RiveStreamProvider(ProviderInterface):
     """
-    RiveStream Provider for https://rivestream.org/
+    RiveStream Provider for https://www.rivestream.app/
     """
 
     def __init__(self):
@@ -399,7 +399,7 @@ class RiveStreamProvider(ProviderInterface):
 
         try:
             response: Response = await self.session.get(
-                "https://rivestream.org/api/backendfetch",
+                "https://www.rivestream.app/api/backendfetch",
                 params={
                     "requestID": "VideoProviderServices",
                     "secretKey": "rive",
@@ -450,7 +450,7 @@ class RiveStreamProvider(ProviderInterface):
 
         try:
             response: Response = await self.session.get(
-                "https://rivestream.org/api/backendfetch",
+                "https://www.rivestream.app/api/backendfetch",
                 params=params,
                 timeout=RIVESTREAM_TIMEOUT,
             )
@@ -540,7 +540,7 @@ class RiveStreamProvider(ProviderInterface):
         response = None
         try:
             response = await self.session.get(
-                "https://rivestream.org/api/backendfetch",
+                "https://www.rivestream.app/api/backendfetch",
                 params=params,
                 timeout=RIVESTREAM_TIMEOUT,
             )
@@ -628,7 +628,7 @@ class RiveStreamProvider(ProviderInterface):
         headers.update(
             {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Referer": "https://rivestream.org/",
+                "Referer": "https://www.rivestream.app/",
                 "Accept-Language": "en-US,en;q=0.9",
             }
         )
